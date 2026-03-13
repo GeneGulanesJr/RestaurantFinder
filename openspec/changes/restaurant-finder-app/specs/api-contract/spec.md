@@ -33,3 +33,8 @@ The system SHALL expose a single GET endpoint at `/api/execute` that accepts `me
 
 - **WHEN** Foursquare or another upstream call fails
 - **THEN** the system returns HTTP 502 with body `{ "error": "Upstream API error" }`
+
+#### Scenario: Rate limit exceeded
+
+- **WHEN** the client has already made 1 LLM interpretation call within the last minute (per client, e.g., per IP or session)
+- **THEN** the system returns HTTP 429 with a body such as `{ "error": "Too many requests", "retry_after": 60 }` and MUST NOT call the LLM

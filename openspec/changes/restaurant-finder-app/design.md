@@ -26,6 +26,8 @@ Greenfield full-stack application for a coding challenge. Users submit natural l
 - **Single GET `/api/execute` for UI and API**: Frontend calls the same endpoint as external consumers; no separate “internal” API. Simplifies contract and avoids duplication.
 - **Foursquare Place Search only for core flow**: Place Details used only if needed for extra fields (e.g., hours); primary results come from Place Search to limit latency and quota. Premium-only fields are skipped.
 - **Vitest for tests**: Fast, TypeScript-native, minimal config; focuses on code validation, LLM parsing, Foursquare filtering, and error handling rather than e2e.
+- **Frontend design context (teach-impeccable)**: Before or during frontend implementation, run the **teach-impeccable** skill once to gather and persist Design Context (users, brand, aesthetic, principles) in CLAUDE.md. All frontend UI work SHALL follow that Design Context so the interface is consistent and on-brand.
+- **LLM rate limit (1 per minute per client)**: Enforced before calling the LLM; 429 when exceeded. Client key can be IP or a session identifier. Reduces cost and abuse; trade-off is that rapid repeated searches by the same user are throttled.
 
 ## Risks / Trade-offs
 
@@ -34,6 +36,7 @@ Greenfield full-stack application for a coding challenge. Users submit natural l
 - **Secrets**: OPENROUTER_API_KEY and FOURSQUARE_API_KEY are server-side only (env vars); never exposed to the client. Mitigation: no key in client bundles; API route is the only caller.
 - **Relevance of results**: Filtering and field selection are applied in code; “open now” and price are passed to Foursquare where supported. Mitigation: return only relevant fields; avoid dumping raw Foursquare payloads.
 - **CORS**: External JSON consumers are assumed server-to-server unless otherwise needed. Browser clients from other origins may require CORS; document or enable if needed.
+- **Rate limit UX**: 1 request per minute may feel strict to users; UI should show a clear message on 429 and optionally display retry_after. Document in README.
 
 ## Agent skills for improvement
 
