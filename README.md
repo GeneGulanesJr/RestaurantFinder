@@ -407,9 +407,7 @@ To use the subdomain **restaurantfinder.genegulanesjr.com**:
    - Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
    - Select the **restaurantfinder** project (or create and name it `restaurantfinder`)
    - Connect your repository and set **Build command**: `npm run build`, **Build output directory**: `.next`
-   - **Important:** If your project has a separate **Deploy command**, set it to:
-     `npx wrangler pages deploy .next --project-name=restaurantfinder`
-     Do **not** use `npx wrangler deploy` (that is for Workers; this app is Pages).
+   - **Deploy command:** Leave **blank** so Cloudflare uploads the build output automatically (recommended). If you set a custom deploy command, use `npx wrangler pages deploy .next --project-name=restaurantfinder`; that requires an API token with "Cloudflare Pages Edit" in the build environment. Do **not** use `npx wrangler deploy` or `npm run start`.
 
 3. **Add the custom domain**:
    - In the same project, go to **Custom domains** → **Set up a custom domain**
@@ -437,7 +435,7 @@ After this, every push to your connected branch will build and deploy, and the a
 
 4. **Deploy**:
    - Push to your connected branch; Cloudflare builds and deploys automatically.
-   - If the build succeeds but deploy fails with **"Missing entry-point to Worker script"**, the deploy command is wrong: it must be **Pages** deploy, not Workers. In **Settings** → **Builds & deployments** (or Build configuration), set the deploy step to: `npx wrangler pages deploy .next --project-name=restaurantfinder`. Do not use `npx wrangler deploy`.
+   - If the build succeeds but deploy fails with **"Missing entry-point to Worker script"**, the deploy command is wrong (use Pages deploy or leave it blank). If deploy fails with **"Authentication error [code: 10000]"**, the build's API token lacks Pages deploy permission—easiest fix: **clear the deploy command** and set only **Build output directory** to `.next` so Cloudflare uploads the build automatically.
    - Optional: deploy from your machine with `npm run deploy` (builds then runs `wrangler pages deploy` for project `restaurantfinder`).
 
 ### Alternative Deployment Options
