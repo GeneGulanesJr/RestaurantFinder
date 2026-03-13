@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionCookieName, verifySession } from "@/lib/session";
 import SearchUI from "./components/SearchUI";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export default async function Home() {
   const cookieStore = await cookies();
