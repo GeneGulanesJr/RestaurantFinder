@@ -17,10 +17,7 @@ const nextConfig: NextConfig = {
   
   // Production optimizations
   compress: true,
-  
-  // Enable SWC minification for faster builds
-  swcMinify: true,
-  
+
   // Experimental features
   experimental: {
     // Optimize package imports

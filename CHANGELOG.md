@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Deployment
+
+- **Cloudflare Pages deploy fix**: README updated so Cloudflare deploy uses Pages (`wrangler pages deploy .next`) instead of Workers (`wrangler deploy`). If the dashboard has a custom deploy command, set it to `npx wrangler pages deploy .next --project-name=restaurantfinder`.
+- **Next.js config**: Removed deprecated `swcMinify` from `next.config.ts` (invalid in Next.js 15; SWC minification is default).
+
 ### Security Improvements
 
 - **Removed hardcoded AUTH_CODE from client-side**: Moved API authentication from client-side hardcoded code to server-side session-based authentication. The `code` parameter is no longer required; authentication is now handled via session cookies.
