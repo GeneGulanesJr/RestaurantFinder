@@ -59,6 +59,9 @@ coverage/
 .kilocode/
 skills-lock.json
 
+# Local task/scratch (not in repo history)
+Task.md
+
 # Misc
 *.local
 .cache/
