@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { z } from "zod";
+import {
+  type SearchRequest,
+  classifySearchInput,
+  recordSearchRefinementEvent,
+} from "@/lib/search-request";
+import { SearchRefinementModal } from "@/app/components/SearchRefinementModal";
 
 // Zod schemas for API response validation
 const restaurantResultSchema = z.object({
@@ -120,6 +126,8 @@ export default function SearchUI() {
   const [lastRequestId, setLastRequestId] = useState<number>(0);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentRequestRef = useRef<number>(0);
+  const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
+  const [showRefinementModal, setShowRefinementModal] = useState(false);
 
   // Cleanup countdown interval on unmount
   useEffect(() => {
@@ -136,7 +144,7 @@ export default function SearchUI() {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
       }
-      
+
       countdownIntervalRef.current = setInterval(() => {
         setRateLimitRemaining((prev) => {
           if (prev === null || prev <= 1) {
@@ -151,15 +159,13 @@ export default function SearchUI() {
     }
   }, [rateLimitRemaining]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = message.trim();
-    if (!trimmed || loading) return;
-    
-    // Request deduplication: increment request ID and check if it's still valid
+  async function executeSearch(withMessage: string) {
+    const trimmed = withMessage.trim();
+    if (!trimmed) return;
+
     const requestId = currentRequestRef.current + 1;
     currentRequestRef.current = requestId;
-    
+
     setError(null);
     setResults(null);
     setInterpreted(null);
@@ -174,18 +180,20 @@ export default function SearchUI() {
     setLoading(true);
 
     try {
-      const url = `/api/execute?message=${encodeURIComponent(trimmed)}`;
-      const res = await fetch(url, { credentials: "include" });
-      
-      // Check if this request is still the latest (deduplication)
-      if (requestId !== currentRequestRef.current) {
-        return; // A newer request has been made, discard this response
+      const params = new URLSearchParams();
+      params.set("message", trimmed);
+      if (searchRequest) {
+        params.set("structured", JSON.stringify(ensureDefaults(searchRequest)));
       }
-      
+      const res = await fetch(`/api/execute?${params.toString()}`, { credentials: "include" });
+
+      if (requestId !== currentRequestRef.current) {
+        return;
+      }
+
       const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        // Validate API response with Zod
         const validationResult = apiSuccessSchema.safeParse(data);
         if (validationResult.success) {
           setResults(validationResult.data.results);
@@ -196,7 +204,6 @@ export default function SearchUI() {
         return;
       }
 
-      // Validate error response with Zod
       const errorValidationResult = apiErrorSchema.safeParse(data);
       if (errorValidationResult.success) {
         const err = errorValidationResult.data;
@@ -215,6 +222,80 @@ export default function SearchUI() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = message.trim();
+    if (!trimmed || loading) return;
+
+    const baseRequest: SearchRequest =
+      searchRequest ?? {
+        query: trimmed,
+        location: "",
+        limit: 10,
+      };
+
+    const classification = classifySearchInput({
+      message: trimmed,
+      currentRequest: baseRequest,
+    });
+
+    if (classification === "execute_directly") {
+      recordSearchRefinementEvent({
+        event: "search_refinement_bypassed",
+        message: trimmed,
+        request: baseRequest,
+      });
+      setSearchRequest(baseRequest);
+      await executeSearch(trimmed);
+      return;
+    }
+
+    recordSearchRefinementEvent({
+      event: "search_refinement_shown",
+      message: trimmed,
+      request: baseRequest,
+    });
+    setSearchRequest(baseRequest);
+    setShowRefinementModal(true);
+  }
+
+  function ensureDefaults(request: SearchRequest): SearchRequest {
+    return {
+      ...request,
+      limit: request.limit || 10,
+      location: request.location || "",
+      priceRange: request.priceRange ?? 2,
+      maxDistanceMeters: request.maxDistanceMeters ?? 3000,
+      minRating: request.minRating ?? 3.5,
+      openNow: request.openNow ?? false,
+      vibeTags: request.vibeTags ?? [],
+    };
+  }
+
+  async function handleRefinementApply(request: SearchRequest) {
+    const completed = ensureDefaults(request);
+    setSearchRequest(completed);
+    setShowRefinementModal(false);
+    recordSearchRefinementEvent({
+      event: "search_refinement_completed",
+      message,
+      request: completed,
+    });
+    await executeSearch(message);
+  }
+
+  async function handleRefinementSkip(request: SearchRequest) {
+    const withDefaults = ensureDefaults(request);
+    setSearchRequest(withDefaults);
+    setShowRefinementModal(false);
+    recordSearchRefinementEvent({
+      event: "search_refinement_bypassed",
+      message,
+      request: withDefaults,
+    });
+    await executeSearch(message);
   }
 
   async function handleLogout() {
@@ -428,6 +509,34 @@ export default function SearchUI() {
           </ul>
         </section>
       )}
+      <SearchRefinementModal
+        isOpen={showRefinementModal}
+        originalMessage={message}
+        inProgressRequest={
+          searchRequest ?? {
+            query: message.trim(),
+            location: "",
+            limit: 10,
+          }
+        }
+        onChangeRequest={(next) => setSearchRequest(next)}
+        onApply={handleRefinementApply}
+        onSkip={handleRefinementSkip}
+        onClose={() => {
+          setShowRefinementModal(false);
+          recordSearchRefinementEvent({
+            event: "search_refinement_dismissed",
+            message,
+            request:
+              searchRequest ??
+              {
+                query: message.trim(),
+                location: "",
+                limit: 10,
+              },
+          });
+        }}
+      />
     </div>
   );
 }

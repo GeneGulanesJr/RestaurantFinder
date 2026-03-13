@@ -37,6 +37,19 @@ export async function GET(request: NextRequest) {
   const rawMessage = searchParams.get("message");
   const message = typeof rawMessage === "string" ? rawMessage.trim() : "";
 
+  const rawStructured = searchParams.get("structured");
+  let structured: unknown = null;
+  if (typeof rawStructured === "string" && rawStructured.trim() !== "") {
+    try {
+      structured = JSON.parse(rawStructured);
+    } catch {
+      return unprocessable({
+        error: "Invalid structured search payload",
+        detail: "structured parameter must be valid JSON",
+      });
+    }
+  }
+
   if (message === "") {
     return badRequest({ error: "message parameter is required" });
   }
@@ -76,6 +89,33 @@ export async function GET(request: NextRequest) {
   // Only record rate limit use after successful LLM interpretation
   recordLimitUse(request);
   const params = interpretResult.params;
+
+  // Merge explicit structured constraints from the frontend, if provided
+  if (structured && typeof structured === "object" && !Array.isArray(structured)) {
+    const obj = structured as {
+      location?: unknown;
+      limit?: unknown;
+      priceRange?: unknown;
+      openNow?: unknown;
+    };
+    if (typeof obj.location === "string" && obj.location.trim() !== "") {
+      params.near = obj.location.trim();
+    }
+    if (typeof obj.limit === "number" && Number.isFinite(obj.limit) && obj.limit > 0) {
+      params.limit = obj.limit;
+    }
+    if (
+      (typeof obj.priceRange === "number" || typeof obj.priceRange === "string") &&
+      Number(obj.priceRange) >= 1 &&
+      Number(obj.priceRange) <= 4
+    ) {
+      const normalizedPrice = String(Number(obj.priceRange)) as "1" | "2" | "3" | "4";
+      params.price = normalizedPrice;
+    }
+    if (typeof obj.openNow === "boolean") {
+      params.open_now = obj.openNow;
+    }
+  }
 
   const foursquareResult = await searchPlaces(params, foursquareKey);
   if (!foursquareResult.ok) {

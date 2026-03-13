@@ -93,6 +93,18 @@ export async function interpretMessage(
       return { ok: false, detail: "Invalid JSON from interpreter" };
     }
 
+    // Defensive: if the model forgot required fields, patch them from the original message
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const obj = parsed as Record<string, unknown>;
+      if (typeof obj.query !== "string" || !obj.query.trim()) {
+        obj.query = message;
+      }
+      if (typeof obj.near !== "string" || !obj.near.trim()) {
+        // Fallback to a generic but concrete location so Foursquare has something geocodable.
+        obj.near = "Angeles, Pampanga";
+      }
+    }
+
     const parsedResult = searchParamsSchema.safeParse(parsed);
     if (!parsedResult.success) {
       const msg = parsedResult.error.flatten().formErrors?.[0]

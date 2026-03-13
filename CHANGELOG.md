@@ -71,6 +71,8 @@
  - **Less-generic copy & wording fixes**: Refined description and “why it’s best” phrasing to feel more natural and brand-like (inspired by Squarespace-style web copy) and fixed awkward constructions like “near near me” by normalizing the interpreted location into friendlier language (“in your area”).
  - **Dynamic relevance-aware explanations**: Result copy now adapts by match quality (direct match, reasonable nearby option, or nearby alternative) using query keyword overlap, category type, distance, rating, open status, and budget intent so different restaurants no longer receive the same generic "strong match" message.
  - **Streaming text feedback**: Added ChatGPT-style streaming text animation for the interpreted query summary and each result’s address line in `SearchUI.tsx`, tuned to a slightly slower pace for readability, with automatic fallback to static text when `prefers-reduced-motion` is enabled.
+ - **Guided search refinement modal**: Added a gamified `SearchRefinementModal` that appears for clearly vague queries, showing the original text, a progress indicator, and chip-based steps for cuisine, price, distance, rating, and open-now.
+ - **Refinement-driven search flow**: `SearchUI` now builds a typed `SearchRequest`, classifies input with `classifySearchInput`, and either executes directly or routes users through the refinement modal with quick templates and a “Skip and search anyway” path before calling `/api/execute`.
 
 ### Testing Improvements
 
@@ -98,3 +100,7 @@
 ### Changed
 
 - **.gitignore**: Added Cursor/agent tooling entries (`.agents/`, `.cursor/commands/`, `.cursor/hooks/state/`, `.kilocode/`, `skills-lock.json`) so plugin cache, state, and lockfiles are not committed; unstaged those paths from the index.
+
+### OpenSpec Changes
+
+- **search-result-details-modal**: Added OpenSpec change for a search result details modal. Proposal, design, specs, and tasks define a flow where clicking a restaurant result opens an accessible modal that surfaces richer Foursquare data (address, contact info, website, metadata) without extra network calls, with clear selection state in the list and keyboard-accessible open/close behavior.
