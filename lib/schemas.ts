@@ -36,6 +36,10 @@ export const restaurantResultSchema = z.object({
   price: z.union([z.number().int().min(1).max(4), priceSchema]).optional(),
   open_now: z.boolean().optional(),
   distance_meters: z.number().optional(),
+  description: z.string().optional(),
+  why_best: z.string().optional(),
+  photos: z.array(z.string()).optional(), // Photo URLs
+  hours: z.string().optional(), // Formatted hours string
 });
 
 export type RestaurantResult = z.infer<typeof restaurantResultSchema>;

@@ -2,9 +2,32 @@
 
 ## [Unreleased]
 
+### Security Improvements
+
+- **Removed hardcoded AUTH_CODE**: Moved AUTH_CODE to environment variable (`AUTH_CODE` env var must be set to enable). Previously hardcoded "pioneerdevai" was a security risk.
+- **Added login rate limiting**: Implemented brute-force protection with 5 failed attempts per 5 minutes per IP. Added `checkLoginRateLimit`, `recordFailedLoginAttempt`, and `clearFailedLoginAttempts` functions to `lib/rate-limit.ts`.
+
+### Performance Improvements
+
+- **Parallel photo fetching**: Replaced sequential 3-second delay photo fetching with parallel batch processing using configurable concurrency (default: 2). Added `FOURSQUARE_PHOTOS_CONCURRENCY` env var. This reduces search latency from ~6s to ~2s for 3 places.
+
+### Frontend Improvements
+
+- **Request deduplication**: Added client-side request deduplication to prevent race conditions when user submits multiple searches rapidly.
+
+### Code Quality
+
+- **Improved error logging**: Added proper error logging for debugging while maintaining graceful degradation. Removed verbose debug console.log statements in production paths.
+
 ### Deployment
 
 - **Cloudflare Pages install fix (EBADPLATFORM)**: Added npm `overrides` so `@esbuild/openharmony-arm64` is replaced with a local stub (`_stubs/openharmony-arm64`). The real package only supports OpenHarmony ARM64; on Linux x64 (Cloudflare build) it caused install to fail. The stub installs on all platforms and is never required at runtime on Pages.
+
+### Frontend
+
+- **Modern themed UI**: Added a token-driven theme (CSS variables + Tailwind mapping) and applied it consistently to `/login` and the root search UI (forms, buttons, alerts, results cards). Palette updated to a cleaner neutral base with a tomato accent so it feels more like a restaurant tool than a parchment-style app. Loaded new fonts via `next/font` and added consistent focus styling.
+- **Motion and micro-interactions**: Added purposeful animations aligned with the animate skill: staggered entrance (fade + slide) on login and search, `rf-reveal` for error/interpreted/results, button hover/active scale and focus-ring transition. All motion respects `prefers-reduced-motion` (durations and delays near zero when reduced).
+- **Bolder + delight pass**: Increased typographic drama in the hero header, added a lightweight background treatment (no images), and introduced tasteful loading/empty-state microcopy while keeping performance and accessibility as first-class constraints.
 
 ### Dependency and security
 
@@ -43,6 +66,11 @@
 - **Rate limit countdown timer**: Added visual countdown timer when rate limit is exceeded. Submit button shows remaining time and is disabled during cooldown.
 - **Logout loading state**: Added loading state and error handling for logout functionality.
 - **Improved error messages**: Better error handling and user feedback for all error scenarios.
+ - **Result descriptions**: Each restaurant result now includes a short, human-readable description that summarizes category, price, rating, and open status so it’s easier to scan and decide where to go.
+ - **Query-aware “why it’s best” copy**: Expanded result descriptions to explicitly tie back to what the user asked for (query, location, “open now”, and price), briefly explaining why each place is a good match (or why it might not be ideal) for that specific search.
+ - **Less-generic copy & wording fixes**: Refined description and “why it’s best” phrasing to feel more natural and brand-like (inspired by Squarespace-style web copy) and fixed awkward constructions like “near near me” by normalizing the interpreted location into friendlier language (“in your area”).
+ - **Dynamic relevance-aware explanations**: Result copy now adapts by match quality (direct match, reasonable nearby option, or nearby alternative) using query keyword overlap, category type, distance, rating, open status, and budget intent so different restaurants no longer receive the same generic "strong match" message.
+ - **Streaming text feedback**: Added ChatGPT-style streaming text animation for the interpreted query summary and each result’s address line in `SearchUI.tsx`, tuned to a slightly slower pace for readability, with automatic fallback to static text when `prefers-reduced-motion` is enabled.
 
 ### Testing Improvements
 

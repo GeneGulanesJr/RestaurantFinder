@@ -12,6 +12,9 @@ const restaurantResultSchema = z.object({
   price: z.number().optional(),
   open_now: z.boolean().optional(),
   distance_meters: z.number().optional(),
+  description: z.string().optional(),
+  why_best: z.string().optional(),
+  photos: z.array(z.string()).optional(),
 });
 
 const apiSuccessSchema = z.object({
@@ -33,6 +36,78 @@ type RestaurantResult = z.infer<typeof restaurantResultSchema>;
 type ApiSuccess = z.infer<typeof apiSuccessSchema>;
 type ApiError = z.infer<typeof apiErrorSchema>;
 
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(media.matches);
+
+    const listener = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches);
+    };
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", listener);
+    }
+
+    return () => {
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", listener);
+      }
+    };
+  }, []);
+
+  return prefersReducedMotion;
+}
+
+type StreamingTextProps = {
+  text: string;
+  className?: string;
+  charDelayMs?: number;
+  respectReducedMotion?: boolean;
+};
+
+function StreamingText({
+  text,
+  className,
+  charDelayMs = 65,
+  respectReducedMotion = true,
+}: StreamingTextProps) {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    if (!text) {
+      setVisibleCount(0);
+      return;
+    }
+
+    if (respectReducedMotion && prefersReducedMotion) {
+      setVisibleCount(text.length);
+      return;
+    }
+
+    setVisibleCount(0);
+    const interval = window.setInterval(() => {
+      setVisibleCount((current) => {
+        if (current >= text.length) {
+          window.clearInterval(interval);
+          return current;
+        }
+        return current + 1;
+      });
+    }, charDelayMs);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [text, charDelayMs, prefersReducedMotion]);
+
+  return <span className={className}>{text.slice(0, visibleCount)}</span>;
+}
+
 export default function SearchUI() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +116,10 @@ export default function SearchUI() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [loadingLine, setLoadingLine] = useState<string | null>(null);
+  const [lastRequestId, setLastRequestId] = useState<number>(0);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const currentRequestRef = useRef<number>(0);
 
   // Cleanup countdown interval on unmount
   useEffect(() => {
@@ -77,14 +155,33 @@ export default function SearchUI() {
     e.preventDefault();
     const trimmed = message.trim();
     if (!trimmed || loading) return;
+    
+    // Request deduplication: increment request ID and check if it's still valid
+    const requestId = currentRequestRef.current + 1;
+    currentRequestRef.current = requestId;
+    
     setError(null);
     setResults(null);
     setInterpreted(null);
+    setLoadingLine(
+      [
+        "Interpreting your request…",
+        "Searching nearby matches…",
+        "Applying your filters…",
+        "Pulling results…",
+      ][Math.floor(Math.random() * 4)],
+    );
     setLoading(true);
 
     try {
       const url = `/api/execute?message=${encodeURIComponent(trimmed)}`;
       const res = await fetch(url, { credentials: "include" });
+      
+      // Check if this request is still the latest (deduplication)
+      if (requestId !== currentRequestRef.current) {
+        return; // A newer request has been made, discard this response
+      }
+      
       const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
@@ -137,85 +234,193 @@ export default function SearchUI() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Restaurant Finder</h1>
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <div className="rf-enter flex items-end justify-between gap-4">
+        <div>
+          <div className="inline-block rounded-xl border border-border bg-surface/70 px-4 py-3 shadow-soft">
+            <h1 className="font-display text-[clamp(2rem,5vw,3.25rem)] leading-[1.02] tracking-tight">
+              Restaurant Finder<span className="text-accent">.</span>
+            </h1>
+            <p className="mt-2 max-w-[56ch] text-sm text-muted">
+              Ask like a human. We’ll interpret your intent, then pull places that match—fast, clear, and
+              readable.
+            </p>
+          </div>
+        </div>
         <button
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="text-sm text-gray-600 hover:text-gray-900 underline disabled:opacity-50"
+          className="rf-focusable text-sm text-muted underline decoration-border underline-offset-4 hover:text-fg focus-visible:rf-focus disabled:opacity-50"
         >
           {loggingOut ? "Logging out…" : "Log out"}
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <label htmlFor="search-message" className="block text-sm font-medium">
-          What are you looking for?
-        </label>
-        <textarea
-          id="search-message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="e.g. Cheap sushi in downtown LA that is open now"
-          rows={3}
-          disabled={loading}
-          className="w-full border border-gray-300 rounded px-3 py-2 disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={loading || !message.trim() || rateLimitRemaining !== null}
-          className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading 
-            ? "Searching…" 
-            : rateLimitRemaining !== null 
-              ? `Please wait ${rateLimitRemaining}s` 
-              : "Search"
-          }
-        </button>
+      <form
+        onSubmit={handleSubmit}
+        className="rf-enter rf-enter-delay-1 rounded-xl border border-border bg-surface shadow-soft"
+      >
+        <div className="px-6 pt-6 pb-5">
+          <label htmlFor="search-message" className="block text-sm font-medium">
+            What are you looking for?
+          </label>
+          <textarea
+            id="search-message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder="e.g. Cheap sushi in downtown LA that is open now"
+            rows={3}
+            disabled={loading}
+            className="rf-focusable mt-2 w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted/70 shadow-sm focus-visible:rf-focus disabled:opacity-50"
+          />
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={loading || !message.trim() || rateLimitRemaining !== null}
+              className="rf-btn-motion rf-focusable inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-ink shadow-sm transition-colors hover:bg-accent/90 focus-visible:rf-focus disabled:opacity-50 disabled:transform-none"
+            >
+              {loading
+                ? "Searching…"
+                : rateLimitRemaining !== null
+                  ? `Please wait ${rateLimitRemaining}s`
+                  : "Search"}
+            </button>
+            <p className="text-xs text-muted">
+              Tip: include <span className="text-fg">near</span>,{" "}
+              <span className="text-fg">price</span>, and{" "}
+              <span className="text-fg">open now</span> if it matters.
+            </p>
+          </div>
+          {loading && loadingLine && (
+            <p className="rf-reveal mt-3 text-xs text-muted">{loadingLine}</p>
+          )}
+        </div>
       </form>
 
       {error && (
-        <div className="p-4 rounded bg-red-50 text-red-800" role="alert">
+        <div
+          className="rf-reveal rounded-xl border border-danger/30 bg-danger-surface px-5 py-4 text-fg"
+          role="alert"
+        >
           {error}
         </div>
       )}
 
       {interpreted && !error && (
-        <p className="text-sm text-gray-600">
-          Interpreted as: <strong>{interpreted.query}</strong> near{" "}
-          <strong>{interpreted.near}</strong> (limit {interpreted.limit})
-        </p>
+        <div className="rf-reveal rounded-xl border border-border bg-card px-5 py-4">
+          <p className="text-xs font-medium tracking-wide text-muted">INTERPRETED</p>
+          <p className="mt-1 text-sm text-fg">
+            <span className="text-muted">Query</span>{" "}
+            <StreamingText
+              key={`interpreted-query-${interpreted.query}-${interpreted.near}-${interpreted.limit}`}
+              text={interpreted.query}
+              className="font-medium inline"
+              respectReducedMotion={false}
+            />{" "}
+            <span className="text-muted">near</span>{" "}
+            <StreamingText
+              key={`interpreted-near-${interpreted.near}-${interpreted.limit}`}
+              text={interpreted.near}
+              className="font-medium inline"
+              respectReducedMotion={false}
+            />{" "}
+            <span className="text-muted">(limit </span>
+            <StreamingText
+              key={`interpreted-limit-${interpreted.limit}`}
+              text={String(interpreted.limit)}
+              className="font-medium inline"
+              respectReducedMotion={false}
+            />
+            <span className="text-muted">)</span>
+          </p>
+        </div>
       )}
 
       {results && !error && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">
+        <section className="rf-reveal space-y-3">
+          <h2 className="text-lg font-semibold text-fg">
             {results.length === 0 ? "No results" : `Results (${results.length})`}
           </h2>
+          {results.length === 0 && (
+            <p className="text-sm text-muted">
+              Try adding a neighborhood, a cuisine, or a constraint like “open now”.
+            </p>
+          )}
           <ul className="space-y-3">
             {results.map((r, i) => (
               <li
                 key={i}
-                className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm"
+                className="rf-reveal rounded-xl border border-border bg-surface px-5 py-4 shadow-soft"
+                style={{ animationDelay: `${150 + i * 100}ms` }}
               >
-                <h3 className="font-medium">{r.name}</h3>
-                <p className="text-sm text-gray-600">{r.address || "—"}</p>
-                <p className="text-sm text-gray-500">{r.category}</p>
-                <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                {r.photos && r.photos.length > 0 && (
+                  <div className="mb-3 flex gap-2 overflow-x-auto pb-2">
+                    {r.photos.slice(0, 3).map((photo, idx) => (
+                      <img
+                        key={idx}
+                        src={photo}
+                        alt={`${r.name} photo ${idx + 1}`}
+                        className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-medium text-fg">{r.name}</h3>
+                    <p className="mt-1 text-sm text-muted">
+                      <StreamingText
+                        key={`result-address-${r.name}-${i}`}
+                        text={r.address || "—"}
+                        className="inline"
+                        respectReducedMotion={false}
+                      />
+                    </p>
+                    <p className="mt-1 text-xs text-muted">{r.category}</p>
+                  </div>
+                  {r.open_now != null && (
+                    <span
+                      className={[
+                        "shrink-0 rounded-full border border-border bg-bg px-2.5 py-1 text-xs font-medium",
+                        r.open_now ? "text-fg" : "text-muted",
+                      ].join(" ")}
+                    >
+                      {r.open_now ? "Open now" : "Closed"}
+                    </span>
+                  )}
+                </div>
+
+                {r.description && (
+                  <p className="mt-3 text-sm text-fg">{r.description}</p>
+                )}
+                {r.why_best && (
+                  <p className="mt-1 text-xs text-muted">{r.why_best}</p>
+                )}
+
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
                   {r.rating != null && (
-                    <span>Rating: {r.rating}</span>
+                    <span className="rounded-full border border-border bg-bg px-2.5 py-1">
+                      Rating <span className="text-fg">{r.rating}</span>
+                    </span>
                   )}
                   {r.price != null && (
-                    <span>Price: {"$".repeat(r.price)}</span>
-                  )}
-                  {r.open_now != null && (
-                    <span>{r.open_now ? "Open now" : "Closed"}</span>
+                    <span className="rounded-full border border-border bg-bg px-2.5 py-1">
+                      Price <span className="text-fg">{"$".repeat(r.price)}</span>
+                    </span>
                   )}
                   {r.distance_meters != null && (
-                    <span>{Math.round(r.distance_meters)} m away</span>
+                    <span className="rounded-full border border-border bg-bg px-2.5 py-1">
+                      <span className="text-fg">{Math.round(r.distance_meters)}m</span> away
+                    </span>
                   )}
                 </div>
               </li>

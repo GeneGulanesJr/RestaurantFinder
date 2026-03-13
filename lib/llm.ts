@@ -3,6 +3,7 @@ import {
   resolveSearchParams,
   type SearchParams,
   type SearchParamsResolved,
+  type RestaurantResult,
 } from "@/lib/schemas";
 
 /** OpenRouter model ID. Document in README. */
@@ -33,6 +34,12 @@ If the message is not about restaurant search or cannot be interpreted, respond 
 export type InterpretResult =
   | { ok: true; params: SearchParamsResolved }
   | { ok: false; detail: string };
+
+export type EnrichedRecommendation = {
+  index: number;
+  description?: string;
+  why_best?: string;
+};
 
 /**
  * Call OpenRouter to interpret the user message into SearchParams.
@@ -118,5 +125,118 @@ export async function interpretMessage(
       return { ok: false, detail: err.message };
     }
     return { ok: false, detail: "Unknown error during interpretation" };
+  }
+}
+
+const RECOMMEND_SYSTEM_PROMPT = `You help turn restaurant search results into concise, human recommendations.
+
+Given:
+- the interpreted search (query, near, open_now, price)
+- a list of places with basic data
+
+You MUST respond with ONLY a JSON array (no markdown, no prose) where each item has:
+- index (number): index of the place in the input list
+- description (string, optional): 1 short sentence describing the place in friendly, natural language
+- why_best (string, optional): 1 short sentence explaining why this place is a good or reasonable option for the search
+
+Guidelines:
+- Sound like a local making suggestions, not like an AI explaining ranking logic.
+- Focus on food, vibe, and distance (e.g. "cozy ramen spot about 2 km away", "casual American diner near downtown").
+- Do NOT mention "tokens", "matching", "schema", or "query parsing".
+- Do NOT repeat the user query verbatim unless it feels natural.
+- Avoid generic phrases like "go-to spot" or "strong match for your search".
+- Stay under ~25 words per sentence.
+- If information is missing (e.g. rating), just omit it instead of apologizing.`;
+
+export async function enrichRecommendationsWithLLM(
+  params: SearchParamsResolved,
+  results: RestaurantResult[],
+  apiKey: string
+): Promise<EnrichedRecommendation[]> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+
+  try {
+    const payload = {
+      interpreted: {
+        query: params.query,
+        near: params.near,
+        open_now: params.open_now ?? false,
+        price: params.price ?? null,
+      },
+      places: results.map((r, index) => ({
+        index,
+        name: r.name,
+        address: r.address,
+        category: r.category,
+        rating: r.rating ?? null,
+        price: r.price ?? null,
+        distance_meters: r.distance_meters ?? null,
+        description: r.description ?? null,
+      })),
+    };
+
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://restaurant-finder.local",
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL_ID,
+        messages: [
+          { role: "system", content: RECOMMEND_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: JSON.stringify(payload),
+          },
+        ],
+        temperature: 0.4,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[llm] enrichRecommendationsWithLLM OpenRouter error", res.status, res.statusText);
+      }
+      return [];
+    }
+
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = data.choices?.[0]?.message?.content?.trim() ?? "";
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[llm] enrichRecommendationsWithLLM invalid JSON content");
+      }
+      return [];
+    }
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const result = (parsed as EnrichedRecommendation[]).filter(
+      (item) => typeof item.index === "number"
+    );
+    return result;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(
+        "[llm] enrichRecommendationsWithLLM failed",
+        err instanceof Error ? err.message : err
+      );
+    }
+    return [];
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionCookie } from "@/lib/session";
 import { validateCsrfToken, generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
+import { checkLoginRateLimit, recordFailedLoginAttempt, clearFailedLoginAttempts } from "@/lib/rate-limit";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -16,6 +17,10 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Check rate limit before processing login
+  const rateLimitResponse = checkLoginRateLimit(request);
+  if (rateLimitResponse) return rateLimitResponse;
+  
   let username: string;
   let password: string;
   let csrfToken: string | undefined;
@@ -53,6 +58,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (username !== DEMO_USERNAME || password !== DEMO_PASSWORD) {
+    // Record failed attempt for rate limiting
+    recordFailedLoginAttempt(request);
     return NextResponse.json(
       { error: "Invalid username or password" },
       { status: 401 }
@@ -60,6 +67,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Clear failed login attempts on successful login
+    clearFailedLoginAttempts(request);
+    
     const { name, value, options } = createSessionCookie();
     const res = NextResponse.json({ success: true });
     res.cookies.set(name, value, options);

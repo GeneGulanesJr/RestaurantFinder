@@ -1,5 +1,5 @@
 /**
- * LLM rate limit: at most 1 call per rolling 60 seconds per client.
+ * LLM rate limit: at most 20 calls per rolling 60 seconds per client.
  * Client identity: CF-Connecting-IP (Cloudflare) or X-Forwarded-For fallback.
  * Local dev: in-memory store. Production on Cloudflare: use Durable Objects (document in README).
  * 
@@ -7,14 +7,23 @@
  */
 
 const WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 1;
+const MAX_REQUESTS_PER_WINDOW = 20;
 const CLEANUP_INTERVAL_MS = 300_000; // 5 minutes
+
+// Login-specific rate limiting (stricter to prevent brute force)
+const LOGIN_WINDOW_MS = 300_000; // 5 minutes
+const MAX_LOGIN_ATTEMPTS = 5; // 5 failed attempts per 5 minutes
 
 interface ClientRequestHistory {
   timestamps: number[];
 }
 
+interface LoginAttemptHistory {
+  failedAttempts: number[];
+}
+
 const clientHistory = new Map<string, ClientRequestHistory>();
+const loginAttempts = new Map<string, LoginAttemptHistory>();
 
 /**
  * Clean up old entries from the rate limit map
@@ -133,5 +142,70 @@ export function getRateLimitStatus(clientId: string): {
     oldestRequest: validTimestamps[0] || null,
     timeUntilReset: validTimestamps[0] ? validTimestamps[0] + WINDOW_MS - now : null,
   };
+}
+
+/**
+ * Check if client has exceeded failed login attempt limit
+ * Returns 429 Response if over limit; otherwise null (allowed).
+ */
+export function checkLoginRateLimit(request: Request): Response | null {
+  const clientId = getClientId(request);
+  const now = Date.now();
+  
+  // Get or create login attempt history
+  let history = loginAttempts.get(clientId);
+  if (!history) {
+    history = { failedAttempts: [] };
+    loginAttempts.set(clientId, history);
+  }
+  
+  // Filter out old attempts
+  const cutoff = now - LOGIN_WINDOW_MS;
+  history.failedAttempts = history.failedAttempts.filter(ts => ts > cutoff);
+  
+  // Check if client has exceeded the limit
+  if (history.failedAttempts.length >= MAX_LOGIN_ATTEMPTS) {
+    const oldestAttempt = history.failedAttempts[0];
+    const retryAfter = Math.ceil((oldestAttempt + LOGIN_WINDOW_MS - now) / 1000);
+    
+    return new Response(
+      JSON.stringify({ 
+        error: "Too many login attempts", 
+        retry_after: Math.max(1, retryAfter) 
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.max(1, retryAfter)),
+        },
+      }
+    );
+  }
+  
+  return null;
+}
+
+/**
+ * Record a failed login attempt for rate limiting
+ */
+export function recordFailedLoginAttempt(request: Request): void {
+  const clientId = getClientId(request);
+  let history = loginAttempts.get(clientId);
+  
+  if (!history) {
+    history = { failedAttempts: [] };
+    loginAttempts.set(clientId, history);
+  }
+  
+  history.failedAttempts.push(Date.now());
+}
+
+/**
+ * Clear failed login attempts on successful login
+ */
+export function clearFailedLoginAttempts(request: Request): void {
+  const clientId = getClientId(request);
+  loginAttempts.delete(clientId);
 }
 

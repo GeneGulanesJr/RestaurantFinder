@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, recordLimitUse } from "@/lib/rate-limit";
-import { interpretMessage } from "@/lib/llm";
+import { interpretMessage, enrichRecommendationsWithLLM } from "@/lib/llm";
 import { searchPlaces } from "@/lib/foursquare";
 import { getSessionCookieName, verifySession } from "@/lib/session";
 import { AUTH_CODE, MESSAGE_MAX_LENGTH } from "@/lib/constants";
@@ -22,7 +22,8 @@ function unprocessable(body: { error: string; detail?: string }) {
 function isAuthorized(request: NextRequest): boolean {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  if (code !== null && code !== "" && code === AUTH_CODE) return true;
+  // Only allow auth code bypass if AUTH_CODE is explicitly set in environment
+  if (code !== null && code !== "" && code === AUTH_CODE && AUTH_CODE !== "") return true;
   const sessionCookie = request.cookies?.get(getSessionCookieName())?.value;
   return verifySession(sessionCookie) !== null;
 }
@@ -87,8 +88,29 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  let results = foursquareResult.results;
+
+  // Let the LLM rewrite descriptions/why_best for a more human feel,
+  // but fall back gracefully if it fails.
+  const enriched = await enrichRecommendationsWithLLM(params, results, openRouterKey);
+  if (enriched.length > 0) {
+    const byIndex = new Map<number, (typeof enriched)[number]>();
+    for (const item of enriched) {
+      byIndex.set(item.index, item);
+    }
+    results = results.map((r, index) => {
+      const extra = byIndex.get(index);
+      if (!extra) return r;
+      return {
+        ...r,
+        description: extra.description ?? r.description,
+        why_best: extra.why_best ?? r.why_best,
+      };
+    });
+  }
+
   return NextResponse.json({
-    results: foursquareResult.results,
+    results,
     interpreted: params,
   });
 }

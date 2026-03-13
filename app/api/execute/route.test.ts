@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "./route";
 
-vi.mock("@/lib/llm", () => ({ interpretMessage: vi.fn() }));
+vi.mock("@/lib/llm", () => ({
+  interpretMessage: vi.fn(),
+  enrichRecommendationsWithLLM: vi.fn(async () => []),
+}));
 vi.mock("@/lib/foursquare", () => ({ searchPlaces: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(() => null),
