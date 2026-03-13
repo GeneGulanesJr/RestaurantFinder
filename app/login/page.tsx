@@ -1,9 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string>("");
+
+  // Fetch CSRF token on component mount
+  useEffect(() => {
+    async function fetchCsrfToken() {
+      try {
+        const res = await fetch("/api/csrf", { credentials: "include" });
+        const data = await res.json();
+        if (data.csrf_token) {
+          setCsrfToken(data.csrf_token);
+        }
+      } catch {
+        // If CSRF token fetch fails, continue without it (for dev mode)
+        console.warn("Failed to fetch CSRF token");
+      }
+    }
+    fetchCsrfToken();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -18,7 +37,7 @@ export default function LoginPage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, csrf_token: csrfToken }),
         credentials: "include",
       });
       const data = await res.json().catch(() => ({}));

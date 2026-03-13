@@ -8,8 +8,17 @@ import {
 /** OpenRouter model ID. Document in README. */
 export const OPENROUTER_MODEL_ID = "openai/gpt-3.5-turbo";
 
-/** Request timeout in ms. Document in README. */
-export const OPENROUTER_TIMEOUT_MS = 15_000;
+/** Request timeout in ms. Document in README. Configurable via OPENROUTER_TIMEOUT_MS env var. */
+export const OPENROUTER_TIMEOUT_MS = (() => {
+  const timeout = process.env.OPENROUTER_TIMEOUT_MS;
+  if (timeout) {
+    const parsed = parseInt(timeout, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return 15_000; // Default 15 seconds
+})();
 
 const SYSTEM_PROMPT = `You are a restaurant search intent parser. Given a user message, output a single JSON object and nothing else. No markdown, no code fences, no explanation. The JSON must have this shape and types:
 

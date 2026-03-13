@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // Only record rate limit use after successful LLM interpretation
   recordLimitUse(request);
   const params = interpretResult.params;
 

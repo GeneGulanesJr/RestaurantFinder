@@ -1,29 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { z } from "zod";
 
-const API_CODE = "pioneerdevai";
+// Zod schemas for API response validation
+const restaurantResultSchema = z.object({
+  name: z.string(),
+  address: z.string(),
+  category: z.string(),
+  rating: z.number().optional(),
+  price: z.number().optional(),
+  open_now: z.boolean().optional(),
+  distance_meters: z.number().optional(),
+});
 
-type RestaurantResult = {
-  name: string;
-  address: string;
-  category: string;
-  rating?: number;
-  price?: number;
-  open_now?: boolean;
-  distance_meters?: number;
-};
+const apiSuccessSchema = z.object({
+  results: z.array(restaurantResultSchema),
+  interpreted: z.object({
+    query: z.string(),
+    near: z.string(),
+    limit: z.number(),
+  }),
+});
 
-type ApiSuccess = {
-  results: RestaurantResult[];
-  interpreted: { query: string; near: string; limit: number };
-};
+const apiErrorSchema = z.object({
+  error: z.string(),
+  detail: z.string().optional(),
+  retry_after: z.number().optional(),
+});
 
-type ApiError = {
-  error: string;
-  detail?: string;
-  retry_after?: number;
-};
+type RestaurantResult = z.infer<typeof restaurantResultSchema>;
+type ApiSuccess = z.infer<typeof apiSuccessSchema>;
+type ApiError = z.infer<typeof apiErrorSchema>;
 
 export default function SearchUI() {
   const [message, setMessage] = useState("");
@@ -31,6 +39,39 @@ export default function SearchUI() {
   const [results, setResults] = useState<RestaurantResult[] | null>(null);
   const [interpreted, setInterpreted] = useState<ApiSuccess["interpreted"] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup countdown interval on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (rateLimitRemaining !== null && rateLimitRemaining > 0) {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+      
+      countdownIntervalRef.current = setInterval(() => {
+        setRateLimitRemaining((prev) => {
+          if (prev === null || prev <= 1) {
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current);
+            }
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  }, [rateLimitRemaining]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,22 +83,35 @@ export default function SearchUI() {
     setLoading(true);
 
     try {
-      const url = `/api/execute?message=${encodeURIComponent(trimmed)}&code=${encodeURIComponent(API_CODE)}`;
-      const res = await fetch(url);
+      const url = `/api/execute?message=${encodeURIComponent(trimmed)}`;
+      const res = await fetch(url, { credentials: "include" });
       const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        setResults((data as ApiSuccess).results ?? []);
-        setInterpreted((data as ApiSuccess).interpreted ?? null);
+        // Validate API response with Zod
+        const validationResult = apiSuccessSchema.safeParse(data);
+        if (validationResult.success) {
+          setResults(validationResult.data.results);
+          setInterpreted(validationResult.data.interpreted);
+        } else {
+          setError("Invalid response from server. Please try again.");
+        }
         return;
       }
 
-      const err = data as ApiError;
-      if (res.status === 429) {
-        const wait = err.retry_after ?? 60;
-        setError(`Too many requests. Please wait ${wait} seconds before trying again.`);
+      // Validate error response with Zod
+      const errorValidationResult = apiErrorSchema.safeParse(data);
+      if (errorValidationResult.success) {
+        const err = errorValidationResult.data;
+        if (res.status === 429) {
+          const wait = err.retry_after ?? 60;
+          setError(`Too many requests. Please wait ${wait} seconds before trying again.`);
+          setRateLimitRemaining(wait);
+        } else {
+          setError(err.detail ?? err.error ?? "Something went wrong. Please try again.");
+        }
       } else {
-        setError(err.detail ?? err.error ?? "Something went wrong. Please try again.");
+        setError("Something went wrong. Please try again.");
       }
     } catch {
       setError("Network error. Please try again.");
@@ -67,12 +121,19 @@ export default function SearchUI() {
   }
 
   async function handleLogout() {
+    setLoggingOut(true);
     try {
-      await fetch("/api/logout", { method: "POST", credentials: "include" });
+      const res = await fetch("/api/logout", { method: "POST", credentials: "include" });
+      if (res.ok) {
+        window.location.href = "/login";
+      } else {
+        setError("Failed to logout. Please try again.");
+      }
     } catch {
-      /* ignore */
+      setError("Network error during logout. Please try again.");
+    } finally {
+      setLoggingOut(false);
     }
-    window.location.href = "/login";
   }
 
   return (
@@ -82,9 +143,10 @@ export default function SearchUI() {
         <button
           type="button"
           onClick={handleLogout}
-          className="text-sm text-gray-600 hover:text-gray-900 underline"
+          disabled={loggingOut}
+          className="text-sm text-gray-600 hover:text-gray-900 underline disabled:opacity-50"
         >
-          Log out
+          {loggingOut ? "Logging out…" : "Log out"}
         </button>
       </div>
 
@@ -103,10 +165,15 @@ export default function SearchUI() {
         />
         <button
           type="submit"
-          disabled={loading || !message.trim()}
+          disabled={loading || !message.trim() || rateLimitRemaining !== null}
           className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? "Searching…" : "Search"}
+          {loading 
+            ? "Searching…" 
+            : rateLimitRemaining !== null 
+              ? `Please wait ${rateLimitRemaining}s` 
+              : "Search"
+          }
         </button>
       </form>
 

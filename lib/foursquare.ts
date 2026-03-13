@@ -11,8 +11,17 @@ export const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com/places/sea
 /** API version header required by Foursquare Places API. */
 export const FOURSQUARE_API_VERSION = "2025-06-17";
 
-/** Request timeout in ms. Document in README. */
-export const FOURSQUARE_TIMEOUT_MS = 15_000;
+/** Request timeout in ms. Document in README. Configurable via FOURSQUARE_TIMEOUT_MS env var. */
+export const FOURSQUARE_TIMEOUT_MS = (() => {
+  const timeout = process.env.FOURSQUARE_TIMEOUT_MS;
+  if (timeout) {
+    const parsed = parseInt(timeout, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return 15_000; // Default 15 seconds
+})();
 
 export type FoursquareResult =
   | { ok: true; results: RestaurantResult[] }

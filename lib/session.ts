@@ -1,7 +1,18 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
 const COOKIE_NAME = "rf_session";
-const TTL_SEC = 7 * 24 * 60 * 60; // 7 days
+const DEFAULT_TTL_SEC = 7 * 24 * 60 * 60; // 7 days
+
+function getSessionTTL(): number {
+  const ttl = process.env.SESSION_TTL_SEC;
+  if (ttl) {
+    const parsed = parseInt(ttl, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return DEFAULT_TTL_SEC;
+}
 
 function b64urlEncode(buf: Buffer): string {
   return buf.toString("base64url");
@@ -25,9 +36,10 @@ function getSecret(): string {
 
 export function createSessionCookie(): { name: string; value: string; options: Record<string, unknown> } {
   const secret = getSecret();
+  const ttl = getSessionTTL();
   const payload = {
     u: "demo",
-    exp: Math.floor(Date.now() / 1000) + TTL_SEC,
+    exp: Math.floor(Date.now() / 1000) + ttl,
   };
   const payloadStr = JSON.stringify(payload);
   const sig = createHmac("sha256", secret).update(payloadStr).digest();
@@ -40,7 +52,7 @@ export function createSessionCookie(): { name: string; value: string; options: R
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax" as const,
       path: "/",
-      maxAge: TTL_SEC,
+      maxAge: ttl,
     },
   };
 }

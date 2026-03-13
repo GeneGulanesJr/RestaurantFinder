@@ -57,6 +57,7 @@ coverage/
 .cursor/commands/
 .cursor/hooks/state/
 .kilocode/
+.kilocodemodes
 skills-lock.json
 
 # Local task/scratch (not in repo history)
