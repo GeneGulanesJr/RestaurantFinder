@@ -391,50 +391,37 @@ npm run test
 
 ## Deployment (Cloudflare)
 
-You can deploy to [Cloudflare Pages](https://developers.cloudflare.com/pages) (with Next.js support) or adapt for other platforms.
+This project uses [OpenNext for Cloudflare](https://opennext.js.org/cloudflare) to deploy Next.js to **Cloudflare Workers**. You can also deploy to Vercel, Netlify, or self-host with Node.
 
-### One-time setup: Pages project and custom domain
+### Deploy to Cloudflare Workers (OpenNext)
 
-To use the subdomain **restaurantfinder.genegulanesjr.com**:
+1. **Install and build** (already in `package.json`):
+   - `npm run build` — Next.js production build
+   - `npm run deploy` — builds with OpenNext and deploys via Wrangler to Cloudflare Workers
 
-1. **Connect your Git repo** to a Pages project:
-   - Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-   - Select the **restaurantfinder** project (or create and name it `restaurantfinder`)
-   - Connect your repository and set:
-     - **Build command:** `npx @cloudflare/next-on-pages@1`
-     - **Build output directory:** `.vercel/output/static`
-   - **Deploy command:** Leave **blank** so Cloudflare uploads the build output automatically.
-   - Do **not** use Build output directory `.next` or `/` — the raw Next.js output is not valid for Pages. This project uses the Cloudflare Next.js adapter so the build produces `.vercel/output/static`.
+2. **First-time deploy**:
+   - Log in: `npx wrangler login`
+   - Set secrets (e.g. `OPENROUTER_API_KEY`, `FOURSQUARE_API_KEY`, `SESSION_SECRET`) in the dashboard or via `wrangler secret put`
+   - Run: `npm run deploy`
 
-2. **Add the custom domain**:
-   - In the same project, go to **Custom domains** → **Set up a custom domain**
-   - Enter: `restaurantfinder.genegulanesjr.com`
-   - If **genegulanesjr.com** is already on Cloudflare, DNS and HTTPS are set up automatically. Otherwise, add the CNAME record Cloudflare shows (e.g. `restaurantfinder` → `restaurantfinder.pages.dev`).
+3. **Preview locally** (Workers runtime): `npm run preview`
 
-After this, every push to your connected branch will build and deploy, and the app will be available at **https://restaurantfinder.genegulanesjr.com**.
+4. **Optional: Connect Git** to Workers & Pages:
+   - [Cloudflare Dashboard](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Workers** → **Connect to Git**
+   - **Build command:** `npm ci && npx opennextjs-cloudflare build`
+   - **Build output directory:** Leave blank (OpenNext produces a Worker in `.open-next/`; Wrangler deploys it automatically.)
+   - **Start command:** Leave blank (Workers are serverless; no long-running process.)
+   - **Deploy command:** Leave default `npx wrangler deploy`.
+   - Add environment variables in the project **Settings** → **Environment variables**.
 
-### Cloudflare Pages Deployment (build and env)
+### Custom domain (e.g. restaurantfinder.genegulanesjr.com)
 
-1. **Configure build settings** (if not already set when connecting Git):
-   - **Framework preset**: Next.js (or leave custom and set the values below)
-   - **Build command**: `npx @cloudflare/next-on-pages@1`
-   - **Build output directory**: `.vercel/output/static`
-   - Using `.next` or `/` will fail: Cloudflare Pages needs the adapter output, not the raw Next.js build folder.
+- In the Workers project: **Settings** → **Domains & routes** → add custom domain and follow DNS instructions.
 
-2. **Set environment variables**:
-   - In the project: **Settings** → **Environment variables**
-   - Add: `OPENROUTER_API_KEY`, `FOURSQUARE_API_KEY`, `SESSION_SECRET` (see [Environment variables](#environment-variables) above)
+### Production rate limiting
 
-3. **Production rate limiting**:
-   - For production, implement the 60s limit using a [Durable Object](https://developers.cloudflare.com/durable-objects/)
-   - Alternative: Use Cloudflare KV with TTL for distributed rate limiting
-   - Update [`lib/rate-limit.ts`](lib/rate-limit.ts) to use the chosen storage backend
-   - Document your implementation choice in this README
-
-4. **Deploy**:
-   - Push to your connected branch; Cloudflare builds and deploys automatically.
-   - If the build succeeds but deploy fails with **"Missing entry-point"** or **"Authentication error [code: 10000]"**, clear the deploy command and use Build output directory `.vercel/output/static` with build command `npx @cloudflare/next-on-pages@1`.
-   - If setting **Build output directory** to `.next` or `/` causes the deploy to fail, switch to the adapter: **Build command** `npx @cloudflare/next-on-pages@1`, **Build output directory** `.vercel/output/static`.
+- For production, implement the 60s limit using a [Durable Object](https://developers.cloudflare.com/durable-objects/) or Cloudflare KV with TTL.
+- Update [`lib/rate-limit.ts`](lib/rate-limit.ts) to use the chosen storage backend and document it here.
 
 ### Alternative Deployment Options
 

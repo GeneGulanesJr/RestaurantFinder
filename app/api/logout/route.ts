@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionCookieName } from "@/lib/session";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function POST() {
   const res = NextResponse.json({ success: true });

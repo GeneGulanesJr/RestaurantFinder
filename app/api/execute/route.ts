@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, recordLimitUse } from "@/lib/rate-limit";
 import { interpretMessage } from "@/lib/llm";
 import { searchPlaces } from "@/lib/foursquare";
+import { getSessionCookieName, verifySession } from "@/lib/session";
 import { AUTH_CODE, MESSAGE_MAX_LENGTH } from "@/lib/constants";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,14 +19,20 @@ function unprocessable(body: { error: string; detail?: string }) {
   return NextResponse.json(body, { status: 422 });
 }
 
-export async function GET(request: NextRequest) {
+function isAuthorized(request: NextRequest): boolean {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  if (code !== null && code !== "" && code === AUTH_CODE) return true;
+  const sessionCookie = request.cookies?.get(getSessionCookieName())?.value;
+  return verifySession(sessionCookie) !== null;
+}
 
-  if (code === null || code === "" || code !== AUTH_CODE) {
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) {
     return unauthorized();
   }
 
+  const { searchParams } = new URL(request.url);
   const rawMessage = searchParams.get("message");
   const message = typeof rawMessage === "string" ? rawMessage.trim() : "";
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 /**
  * GET /api/csrf - Returns a CSRF token for use in forms

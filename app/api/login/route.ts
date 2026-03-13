@@ -3,7 +3,7 @@ import { createSessionCookie } from "@/lib/session";
 import { validateCsrfToken, generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
 import { z } from "zod";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 const DEMO_USERNAME = process.env.DEMO_USERNAME || "demo";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "1234";

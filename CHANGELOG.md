@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Dependency and security
+
+- **Packages updated to latest (no hotfix)**: Removed legacy-peer-deps workaround. Upgraded **Next.js** to `^16.1.6`, **React** to `^19.2.4`, **Zod** to `^3.25.76`, **Tailwind** to `^3.4.19`, **ESLint** to `^10`, **TypeScript** to `^5.9`, **Vitest** to `^4.1`, and related types. Replaced **@cloudflare/next-on-pages** with **@opennextjs/cloudflare** and **wrangler** `^4.65.0` for Cloudflare Workers deployment. Added `wrangler.jsonc`, `open-next.config.ts`, `public/_headers`, and scripts `preview` / `deploy`. All API routes and the root page use `runtime = "nodejs"` (OpenNext does not support Edge). README deployment section updated for OpenNext. `npm audit` reports **0 vulnerabilities**.
+
 ### Deployment
 
 - **Edge Runtime for Cloudflare Pages**: Added `export const runtime = 'edge'` to all non-static routes so the build succeeds on Cloudflare Pages: `/api/csrf`, `/api/execute`, `/api/login`, `/api/logout`, and the root page (`/`).
@@ -10,6 +14,7 @@
 
 ### Security Improvements
 
+- **Execute route accepts session or code**: `/api/execute` now authorizes via valid `code` query param or a valid session cookie, so logged-in UI requests (with cookies, no `code`) succeed and direct API callers can still use `code=pioneerdevai`.
 - **Removed hardcoded AUTH_CODE from client-side**: Moved API authentication from client-side hardcoded code to server-side session-based authentication. The `code` parameter is no longer required; authentication is now handled via session cookies.
 - **Implemented CSRF protection**: Added CSRF token generation and validation for all sensitive operations (login). Created `lib/csrf.ts` with timing-safe token comparison and `/api/csrf` endpoint for token generation.
 - **Environment-based demo credentials**: Moved demo credentials (`DEMO_USERNAME`, `DEMO_PASSWORD`) to environment variables with secure defaults.
