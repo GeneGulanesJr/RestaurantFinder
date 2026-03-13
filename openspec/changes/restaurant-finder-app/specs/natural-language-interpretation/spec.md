@@ -17,4 +17,4 @@ The system SHALL convert a free-form user message into a validated structured se
 #### Scenario: SearchParams shape
 
 - **WHEN** interpretation succeeds
-- **THEN** the validated object SHALL include at least: `query` (string), `near` (string), and optionally `open_now` (boolean), `price` ("1"|"2"|"3"|"4"), `limit` (number)
+- **THEN** the validated object SHALL include at least: `query` (string), `near` (string), and optionally `open_now` (boolean), `price` ("1"|"2"|"3"|"4"), `limit` (number). When `limit` is omitted, the system SHALL use a default (e.g., 10) before calling Foursquare.

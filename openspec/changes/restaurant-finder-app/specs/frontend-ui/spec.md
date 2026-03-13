@@ -23,3 +23,8 @@ The system SHALL provide a usable web interface at the root route (`/`) that all
 
 - **WHEN** the user visits the root route
 - **THEN** the UI SHALL include: a text input or textarea for the natural language request, a submit button, and an area for results or messages (loading/error/results)
+
+#### Scenario: API request authorization
+
+- **WHEN** the user submits a search
+- **THEN** the UI SHALL call the same `/api/execute` endpoint with the required `code` parameter so that the request is authorized (the value may be hardcoded or configured for the UI flow)

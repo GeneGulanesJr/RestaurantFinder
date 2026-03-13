@@ -2,12 +2,17 @@
 
 ### Requirement: GET /api/execute endpoint contract
 
-The system SHALL expose a single GET endpoint at `/api/execute` that accepts `message` and `code` as query parameters. The same endpoint SHALL be used by the frontend UI and by external JSON consumers.
+The system SHALL expose a single GET endpoint at `/api/execute` that accepts `message` and `code` as query parameters. The same endpoint SHALL be used by the frontend UI and by external JSON consumers. Success and error responses MUST use `Content-Type: application/json`.
 
-#### Scenario: Success response
+#### Scenario: Success response with results
 
-- **WHEN** the request is authorized (`code=pioneerdevai`), the message is valid, interpretation succeeds, and Foursquare returns results
+- **WHEN** the request is authorized (`code=pioneerdevai`), the message is valid, interpretation succeeds, and Foursquare returns one or more results
 - **THEN** the system returns HTTP 200 with a JSON body containing at least: `results` (array of restaurant objects with name, address, category, and optional rating, price, open_now, distance_meters) and `interpreted` (the validated SearchParams used for the search)
+
+#### Scenario: Success response with zero results
+
+- **WHEN** the request is authorized, the message is valid, interpretation succeeds, and Foursquare returns no results
+- **THEN** the system returns HTTP 200 with a JSON body containing `results` (empty array) and `interpreted` (the SearchParams used for the search)
 
 #### Scenario: Unauthorized
 

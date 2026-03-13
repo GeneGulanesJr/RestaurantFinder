@@ -33,3 +33,38 @@ Greenfield full-stack application for a coding challenge. Users submit natural l
 - **Foursquare rate limits / downtime**: Handled as 502 with `{ error: "Upstream API error" }`; no retry or cache. Mitigation: document in README; future work could add retries or caching.
 - **Secrets**: OPENROUTER_API_KEY and FOURSQUARE_API_KEY are server-side only (env vars); never exposed to the client. Mitigation: no key in client bundles; API route is the only caller.
 - **Relevance of results**: Filtering and field selection are applied in code; “open now” and price are passed to Foursquare where supported. Mitigation: return only relevant fields; avoid dumping raw Foursquare payloads.
+- **CORS**: External JSON consumers are assumed server-to-server unless otherwise needed. Browser clients from other origins may require CORS; document or enable if needed.
+
+## Agent skills for improvement
+
+The following project skills are available to improve this change (UX, design, performance, security, and implementation quality). Use them where they add value.
+
+**MCP usage:** Prefer **jCodeMunch** MCP for codebase exploration (index the project, then use `search_symbols`, `get_symbol`, `get_file_outline`, `get_repo_outline`) and for navigating large files (500+ lines). Use **jDocMunch** MCP for reading and looking up documentation.
+
+- **adapt** — Responsive and cross-device consistency  
+- **agents-sdk** — AI agents on Cloudflare Workers  
+- **animate** — Purposeful animations and micro-interactions  
+- **audit** — Accessibility, performance, theming, responsive design  
+- **bolder** — Stronger visual impact while keeping usability  
+- **building-ai-agent-on-cloudflare** — Cloudflare AI agents  
+- **building-mcp-server-on-cloudflare** — Remote MCP servers on Workers  
+- **clarify** — Clearer UX copy, error messages, labels  
+- **cloudflare** — Workers, Pages, storage, AI, networking  
+- **colorize** — Strategic use of color  
+- **critique** — UX and design effectiveness  
+- **delight** — Joy, personality, memorable touches  
+- **distill** — Simplicity and reduced complexity  
+- **durable-objects** — Cloudflare Durable Objects  
+- **extract** — Reusable components and design tokens  
+- **frontend-design** — Production-grade frontend interfaces  
+- **harden** — Error handling, i18n, edge cases  
+- **normalize** — Design system consistency  
+- **onboard** — Onboarding, empty states, first-time UX  
+- **optimize** — Performance (load, render, bundle)  
+- **polish** — Alignment, spacing, consistency  
+- **quieter** — Toned-down intensity when needed  
+- **sandbox-sdk** — Sandboxed code execution  
+- **teach-impeccable** — One-time design context setup  
+- **web-perf** — Core Web Vitals, Lighthouse, speed  
+- **workers-best-practices** — Cloudflare Workers production patterns  
+- **wrangler** — Workers CLI and deployment
