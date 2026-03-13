@@ -4,6 +4,7 @@
 
 ### Deployment
 
+- **Edge Runtime for Cloudflare Pages**: Added `export const runtime = 'edge'` to all non-static routes so the build succeeds on Cloudflare Pages: `/api/csrf`, `/api/execute`, `/api/login`, `/api/logout`, and the root page (`/`).
 - **Cloudflare Pages deploy fix**: README updated so Cloudflare deploy uses Pages (`wrangler pages deploy .next`) instead of Workers (`wrangler deploy`). If the dashboard has a custom deploy command, set it to `npx wrangler pages deploy .next --project-name=restaurantfinder`.
 - **Next.js config**: Removed deprecated `swcMinify` from `next.config.ts` (invalid in Next.js 15; SWC minification is default).
 

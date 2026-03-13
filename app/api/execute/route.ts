@@ -4,6 +4,8 @@ import { interpretMessage } from "@/lib/llm";
 import { searchPlaces } from "@/lib/foursquare";
 import { AUTH_CODE, MESSAGE_MAX_LENGTH } from "@/lib/constants";
 
+export const runtime = "edge";
+
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }

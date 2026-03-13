@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
 
+export const runtime = "nodejs";
+
 /**
  * GET /api/csrf - Returns a CSRF token for use in forms
  * This endpoint should be called before submitting sensitive forms
