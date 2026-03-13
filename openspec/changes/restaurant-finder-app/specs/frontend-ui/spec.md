@@ -2,7 +2,7 @@
 
 ### Requirement: Frontend UI at root route
 
-The system SHALL provide a usable web interface at the root route (`/`) that allows the user to submit a natural language restaurant search and view results. The UI MUST feel intentional and easy to use. The frontend SHALL follow the project's Design Context (established via the **teach-impeccable** skill and persisted in CLAUDE.md or equivalent) for brand, aesthetic, and design principles when that context exists.
+The system SHALL provide a usable web interface at the root route (`/`) that allows the user to submit a natural language restaurant search and view results. Access to `/` SHALL be restricted to authenticated users only; unauthenticated users SHALL be redirected to `/login` (see login-page spec). The UI MUST feel intentional and easy to use. The frontend SHALL follow the project's Design Context (established via the **teach-impeccable** skill and persisted in **.cursorrules** for Cursor) for brand, aesthetic, and design principles when that context exists.
 
 #### Scenario: Happy path
 
@@ -26,8 +26,8 @@ The system SHALL provide a usable web interface at the root route (`/`) that all
 
 #### Scenario: Required UI elements
 
-- **WHEN** the user visits the root route
-- **THEN** the UI SHALL include: a text input or textarea for the natural language request, a submit button, and an area for results or messages (loading/error/results)
+- **WHEN** the authenticated user visits the root route
+- **THEN** the UI SHALL include: a text input or textarea for the natural language request, a submit button, and an area for results or messages (loading/error/results). Optionally include a logout control that clears the session and redirects to `/login`.
 
 #### Scenario: API request authorization
 
@@ -37,4 +37,4 @@ The system SHALL provide a usable web interface at the root route (`/`) that all
 #### Scenario: Design context (impeccable)
 
 - **WHEN** implementing or refining the frontend UI
-- **THEN** the implementer SHALL use the **teach-impeccable** skill to establish Design Context (users, brand personality, aesthetic direction, design principles) if not already present, and SHALL apply that Design Context to all UI decisions (typography, spacing, color, tone, components)
+- **THEN** the implementer SHALL use the **teach-impeccable** skill to establish Design Context (users, brand personality, aesthetic direction, design principles) in **.cursorrules** if not already present, and SHALL apply that Design Context to all UI decisions (typography, spacing, color, tone, components)

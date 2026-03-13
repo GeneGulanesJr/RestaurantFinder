@@ -8,11 +8,12 @@ Users need to find restaurants by typing a natural language request (e.g., "Find
 - **API authentication gate**: Validate `code === "pioneerdevai"` on every request; return 401 when missing or wrong.
 - **Natural language interpretation**: Convert free-form user message to structured search params (query, near, open_now, price, limit) via LLM (OpenRouter), with Zod validation before any downstream call.
 - **Foursquare integration**: Call Foursquare Place Search with validated params; filter and return only relevant restaurant fields (name, address, category, rating, price, open_now, etc.).
-- **Frontend UI**: Text input/textarea, submit button, loading state, error handling, and a clean results view at `/`.
+- **Login page**: A login page at `/login` with username `demo` and password `1234`; successful login establishes a session and redirects to `/`; unauthenticated users visiting `/` are redirected to `/login`.
+- **Frontend UI**: Text input/textarea, submit button, loading state, error handling, and a clean results view at `/` (accessible only when logged in).
 - **GET `/api/execute` contract**: Single endpoint for UI and external consumers; success JSON with `results` and `interpreted`; error responses 401, 400, 422, 429, 502.
-- **LLM rate limit**: At most 1 interpretation (LLM) call per minute per client; return 429 when exceeded.
+- **LLM rate limit**: At most 1 interpretation (LLM) call per rolling 60 seconds per client; return 429 when exceeded.
 - **Automated tests**: Backend and parsing/validation logic (code validation, LLM output parsing, Foursquare result filtering, error handling).
-- **README and deployment**: Setup instructions, env vars, how to run and test, deployed URL (e.g., Vercel).
+- **README and deployment**: Setup instructions, env vars, how to run and test, deployed URL (Cloudflare).
 
 ## Capabilities
 
@@ -21,9 +22,10 @@ Users need to find restaurants by typing a natural language request (e.g., "Find
 - `api-auth-gate`: Validates `code` query parameter; 401 when absent or not `pioneerdevai`.
 - `natural-language-interpretation`: Converts user message to validated SearchParams (query, near, open_now, price, limit) via LLM + Zod; fails with 422 on malformed output.
 - `foursquare-integration`: Foursquare Place Search and optional details; filtered, relevant result schema; 502 on upstream failure.
-- `frontend-ui`: Root route UI with input, submit, loading, error display, and readable results (name, address, category, rating, price, hours/open status).
+- `login-page`: Login at `/login` with fixed credentials (username `demo`, password `1234`); session-based access; protect `/` so only authenticated users see the search UI.
+- `frontend-ui`: Root route UI with input, submit, loading, error display, and readable results (name, address, category, rating, price, hours/open status); only available when logged in.
 - `api-contract`: GET `/api/execute?message=...&code=pioneerdevai`; success and error response shapes; same endpoint for UI and JSON consumers; includes 429 for rate limit.
-- `llm-rate-limit`: Enforce at most 1 LLM interpretation call per minute per client (e.g., per IP or per session); return 429 when exceeded.
+- `llm-rate-limit`: Enforce at most 1 LLM interpretation call per rolling 60 seconds per client (Cloudflare: per IP via `CF-Connecting-IP`); return 429 when exceeded.
 
 ### Modified Capabilities
 
@@ -34,4 +36,4 @@ Users need to find restaurants by typing a natural language request (e.g., "Find
 - New codebase: `/app`, `/lib`, `/tests`, config for Next.js, Tailwind, Vitest.
 - Dependencies: Next.js, OpenRouter (LLM), Foursquare Places API client usage, Zod.
 - Environment: `OPENROUTER_API_KEY`, `FOURSQUARE_API_KEY` (server-side only).
-- Deployment target: Vercel (or similar) for live UI and API.
+- Deployment target: Cloudflare (Pages/Workers) for live UI and API.

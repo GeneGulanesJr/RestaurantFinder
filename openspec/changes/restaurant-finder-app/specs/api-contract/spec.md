@@ -21,8 +21,13 @@ The system SHALL expose a single GET endpoint at `/api/execute` that accepts `me
 
 #### Scenario: Missing message
 
-- **WHEN** `message` is missing or empty and `code` is valid
+- **WHEN** `message` is missing, empty, or whitespace-only (after trim) and `code` is valid
 - **THEN** the system returns HTTP 400 with a body such as `{ "error": "message parameter is required" }`
+
+#### Scenario: Message exceeds max length (optional)
+
+- **WHEN** the system implements a message length cap and `message` (after trim) exceeds that cap
+- **THEN** the system returns HTTP 400 with a body such as `{ "error": "message too long" }` (or similar); the cap MUST be documented in README
 
 #### Scenario: Interpretation failure
 
@@ -36,5 +41,5 @@ The system SHALL expose a single GET endpoint at `/api/execute` that accepts `me
 
 #### Scenario: Rate limit exceeded
 
-- **WHEN** the client has already made 1 LLM interpretation call within the last minute (per client, e.g., per IP or session)
-- **THEN** the system returns HTTP 429 with a body such as `{ "error": "Too many requests", "retry_after": 60 }` and MUST NOT call the LLM
+- **WHEN** the client has already made 1 LLM interpretation call within the last 60 seconds (rolling window, per client, e.g., per IP or session)
+- **THEN** the system returns HTTP 429 with a body such as `{ "error": "Too many requests", "retry_after": 60 }`, MUST include a `Retry-After: 60` response header, and MUST NOT call the LLM

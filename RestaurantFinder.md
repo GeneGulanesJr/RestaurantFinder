@@ -16,7 +16,7 @@ A full stack application that interprets natural language restaurant search requ
 | Places Data | Foursquare Places API | Required by the brief |
 | Validation | Zod | Runtime schema validation for LLM output and API params |
 | Testing | Vitest | TypeScript-native, fast, minimal config |
-| Deployment | Vercel | Zero-config Next.js deployment, free tier |
+| Deployment | Cloudflare (Pages/Workers) | Runs UI + API on Cloudflare; supports edge deployment and Durable Objects if needed |
 
 ### Environment Variables
 
