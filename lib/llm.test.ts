@@ -17,7 +17,7 @@ describe("interpretMessage", () => {
     if (!result.ok) expect(result.detail).toContain("JSON");
   });
 
-  it("returns error when parsed object fails SearchParams validation", async () => {
+  it("falls back to original message when parsed object has empty query", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -26,8 +26,12 @@ describe("interpretMessage", () => {
     } as Response);
 
     const result = await interpretMessage("pizza in LA", "test-key");
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.detail).toBeDefined();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.params.query).toBe("pizza in LA");
+      expect(result.params.near).toBe("LA");
+      expect(result.params.limit).toBe(10);
+    }
   });
 
   it("returns error when LLM returns uninterpretable", async () => {

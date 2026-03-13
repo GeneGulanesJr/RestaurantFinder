@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "./route";
 
+vi.mock("@/lib/constants", () => ({
+  AUTH_CODE: "pioneerdevai",
+  MESSAGE_MAX_LENGTH: 2000,
+}));
 vi.mock("@/lib/llm", () => ({
   interpretMessage: vi.fn(),
   enrichRecommendationsWithLLM: vi.fn(async () => []),
@@ -23,6 +27,7 @@ describe("execute route - code param validation", () => {
   beforeEach(() => {
     process.env.OPENROUTER_API_KEY = "test-key";
     process.env.FOURSQUARE_API_KEY = "test-fs-key";
+    process.env.AUTH_CODE = "pioneerdevai";
     vi.mocked(interpretMessage).mockResolvedValue({
       ok: true,
       params: { query: "pizza", near: "LA", limit: 10 },
@@ -64,6 +69,7 @@ describe("execute route - message validation", () => {
   beforeEach(() => {
     process.env.OPENROUTER_API_KEY = "test-key";
     process.env.FOURSQUARE_API_KEY = "test-fs-key";
+    process.env.AUTH_CODE = "pioneerdevai";
   });
 
   it("returns 400 when message is missing", async () => {
@@ -89,6 +95,7 @@ describe("execute route - interpretation failure (422)", () => {
   beforeEach(() => {
     process.env.OPENROUTER_API_KEY = "test-key";
     process.env.FOURSQUARE_API_KEY = "test-fs-key";
+    process.env.AUTH_CODE = "pioneerdevai";
     vi.mocked(interpretMessage).mockResolvedValue({
       ok: false,
       detail: "Invalid JSON from interpreter",
@@ -110,6 +117,7 @@ describe("execute route - rate limit (429)", () => {
   beforeEach(() => {
     process.env.OPENROUTER_API_KEY = "test-key";
     process.env.FOURSQUARE_API_KEY = "test-fs-key";
+    process.env.AUTH_CODE = "pioneerdevai";
     vi.mocked(checkRateLimit).mockReturnValue(
       new Response(
         JSON.stringify({ error: "Too many requests", retry_after: 60 }),
