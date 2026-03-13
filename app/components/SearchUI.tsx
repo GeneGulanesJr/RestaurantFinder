@@ -8,6 +8,7 @@ import {
   recordSearchRefinementEvent,
 } from "@/lib/search-request";
 import { SearchRefinementModal } from "@/app/components/SearchRefinementModal";
+import { ResultDetailsModal } from "./ResultDetailsModal";
 
 // Zod schemas for API response validation
 const restaurantResultSchema = z.object({
@@ -41,6 +42,8 @@ const apiErrorSchema = z.object({
 type RestaurantResult = z.infer<typeof restaurantResultSchema>;
 type ApiSuccess = z.infer<typeof apiSuccessSchema>;
 type ApiError = z.infer<typeof apiErrorSchema>;
+
+export type ResultPlace = RestaurantResult;
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -128,6 +131,7 @@ export default function SearchUI() {
   const currentRequestRef = useRef<number>(0);
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
   const [showRefinementModal, setShowRefinementModal] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<RestaurantResult | null>(null);
 
   // Cleanup countdown interval on unmount
   useEffect(() => {
@@ -436,12 +440,27 @@ export default function SearchUI() {
             </p>
           )}
           <ul className="space-y-3">
-            {results.map((r, i) => (
-              <li
-                key={i}
-                className="rf-reveal rounded-xl border border-border bg-surface px-5 py-4 shadow-soft"
-                style={{ animationDelay: `${150 + i * 100}ms` }}
-              >
+            {results.map((r, i) => {
+              const isSelected = selectedResult === r;
+              return (
+                <li
+                  key={i}
+                  className={[
+                    "rf-reveal rounded-xl border bg-surface px-5 py-4 shadow-soft rf-focusable cursor-pointer",
+                    isSelected ? "border-accent bg-accent/5" : "border-border",
+                  ].join(" ")}
+                  style={{ animationDelay: `${150 + i * 100}ms` }}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  onClick={() => setSelectedResult(r)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedResult(r);
+                    }
+                  }}
+                >
                 {r.photos && r.photos.length > 0 && (
                   <div className="mb-3 flex gap-2 overflow-x-auto pb-2">
                     {r.photos.slice(0, 3).map((photo, idx) => (
@@ -505,10 +524,16 @@ export default function SearchUI() {
                   )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </section>
       )}
+      <ResultDetailsModal
+        isOpen={!!selectedResult}
+        place={selectedResult}
+        onClose={() => setSelectedResult(null)}
+      />
       <SearchRefinementModal
         isOpen={showRefinementModal}
         originalMessage={message}
