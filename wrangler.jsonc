@@ -1,6 +1,0 @@
-{
-  // Cloudflare PAGES only — this app is Next.js, not a Worker. Do not add "main" or deploy with "wrangler deploy".
-  // Custom domain: restaurantfinder.genegulanesjr.com — add in dashboard (see README)
-  "name": "restaurantfinder",
-  "pages_build_output_dir": ".next"
-}

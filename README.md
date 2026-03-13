@@ -391,25 +391,22 @@ npm run test
 
 ## Deployment (Cloudflare)
 
-You can deploy to [Cloudflare Pages](https://developers.cloudflare.com/pages) (with Next.js support) or adapt for Workers. This project uses [Wrangler](https://developers.cloudflare.com/workers/wrangler/) for the Pages project name and optional CLI deploys.
+You can deploy to [Cloudflare Pages](https://developers.cloudflare.com/pages) (with Next.js support) or adapt for other platforms.
 
 ### One-time setup: Pages project and custom domain
 
 To use the subdomain **restaurantfinder.genegulanesjr.com**:
 
-1. **Create the Pages project** (once):
-   ```bash
-   npm run pages:create
-   ```
-   When prompted, confirm the project name `restaurantfinder`. If the project already exists, you can skip this.
-
-2. **Connect your Git repo** to this project:
+1. **Connect your Git repo** to a Pages project:
    - Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
    - Select the **restaurantfinder** project (or create and name it `restaurantfinder`)
-   - Connect your repository and set **Build command**: `npm run build`, **Build output directory**: `.next`
-   - **Deploy command:** Leave **blank** so Cloudflare uploads the build output automatically (recommended). If you set a custom deploy command, use `npx wrangler pages deploy .next --project-name=restaurantfinder`; that requires an API token with "Cloudflare Pages Edit" in the build environment. Do **not** use `npx wrangler deploy` or `npm run start`.
+   - Connect your repository and set:
+     - **Build command:** `npx @cloudflare/next-on-pages@1`
+     - **Build output directory:** `.vercel/output/static`
+   - **Deploy command:** Leave **blank** so Cloudflare uploads the build output automatically.
+   - Do **not** use Build output directory `.next` or `/` — the raw Next.js output is not valid for Pages. This project uses the Cloudflare Next.js adapter so the build produces `.vercel/output/static`.
 
-3. **Add the custom domain**:
+2. **Add the custom domain**:
    - In the same project, go to **Custom domains** → **Set up a custom domain**
    - Enter: `restaurantfinder.genegulanesjr.com`
    - If **genegulanesjr.com** is already on Cloudflare, DNS and HTTPS are set up automatically. Otherwise, add the CNAME record Cloudflare shows (e.g. `restaurantfinder` → `restaurantfinder.pages.dev`).
@@ -419,9 +416,10 @@ After this, every push to your connected branch will build and deploy, and the a
 ### Cloudflare Pages Deployment (build and env)
 
 1. **Configure build settings** (if not already set when connecting Git):
-   - **Framework preset**: Next.js
-   - **Build command**: `npm run build`
-   - **Build output directory**: `.next`
+   - **Framework preset**: Next.js (or leave custom and set the values below)
+   - **Build command**: `npx @cloudflare/next-on-pages@1`
+   - **Build output directory**: `.vercel/output/static`
+   - Using `.next` or `/` will fail: Cloudflare Pages needs the adapter output, not the raw Next.js build folder.
 
 2. **Set environment variables**:
    - In the project: **Settings** → **Environment variables**
@@ -435,8 +433,8 @@ After this, every push to your connected branch will build and deploy, and the a
 
 4. **Deploy**:
    - Push to your connected branch; Cloudflare builds and deploys automatically.
-   - If the build succeeds but deploy fails with **"Missing entry-point to Worker script"**, the deploy command is wrong (use Pages deploy or leave it blank). If deploy fails with **"Authentication error [code: 10000]"**, the build's API token lacks Pages deploy permission—easiest fix: **clear the deploy command** and set only **Build output directory** to `.next` so Cloudflare uploads the build automatically.
-   - Optional: deploy from your machine with `npm run deploy` (builds then runs `wrangler pages deploy` for project `restaurantfinder`).
+   - If the build succeeds but deploy fails with **"Missing entry-point"** or **"Authentication error [code: 10000]"**, clear the deploy command and use Build output directory `.vercel/output/static` with build command `npx @cloudflare/next-on-pages@1`.
+   - If setting **Build output directory** to `.next` or `/` causes the deploy to fail, switch to the adapter: **Build command** `npx @cloudflare/next-on-pages@1`, **Build output directory** `.vercel/output/static`.
 
 ### Alternative Deployment Options
 
