@@ -1,0 +1,8 @@
+{
+  "name": "@esbuild/openharmony-arm64",
+  "version": "0.0.0",
+  "description": "Stub for Linux/Windows build; real binary only needed on OpenHarmony ARM64",
+  "main": "index.js",
+  "os": ["linux", "darwin", "win32"],
+  "cpu": ["x64", "arm64", "ia32"]
+}

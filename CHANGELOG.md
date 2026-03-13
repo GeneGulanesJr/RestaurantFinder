@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Deployment
+
+- **Cloudflare Pages install fix (EBADPLATFORM)**: Added npm `overrides` so `@esbuild/openharmony-arm64` is replaced with a local stub (`_stubs/openharmony-arm64`). The real package only supports OpenHarmony ARM64; on Linux x64 (Cloudflare build) it caused install to fail. The stub installs on all platforms and is never required at runtime on Pages.
+
 ### Dependency and security
 
 - **Packages updated to latest (no hotfix)**: Removed legacy-peer-deps workaround. Upgraded **Next.js** to `^16.1.6`, **React** to `^19.2.4`, **Zod** to `^3.25.76`, **Tailwind** to `^3.4.19`, **ESLint** to `^10`, **TypeScript** to `^5.9`, **Vitest** to `^4.1`, and related types. Replaced **@cloudflare/next-on-pages** with **@opennextjs/cloudflare** and **wrangler** `^4.65.0` for Cloudflare Workers deployment. Added `wrangler.jsonc`, `open-next.config.ts`, `public/_headers`, and scripts `preview` / `deploy`. All API routes and the root page use `runtime = "nodejs"` (OpenNext does not support Edge). README deployment section updated for OpenNext. `npm audit` reports **0 vulnerabilities**.
