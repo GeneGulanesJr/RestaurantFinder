@@ -6,9 +6,12 @@
 
 - **Removed hardcoded AUTH_CODE**: Moved AUTH_CODE to environment variable (`AUTH_CODE` env var must be set to enable). Previously hardcoded "pioneerdevai" was a security risk.
 - **Added login rate limiting**: Implemented brute-force protection with 5 failed attempts per 5 minutes per IP. Added `checkLoginRateLimit`, `recordFailedLoginAttempt`, and `clearFailedLoginAttempts` functions to `lib/rate-limit.ts`.
+- **Session expiry and logout clearing**: Default session TTL is now 4 hours (was 7 days). Override with `SESSION_TTL_SEC` env var. Logout route now clears the session cookie with explicit `expires` and `secure` (in production) so the user is fully logged out and the cookie is removed across clients.
 
 ### Performance Improvements
 
+- **Show results immediately, then stream updates**: Execute API now sends the first `results` chunk as soon as Foursquare place search returns (no wait for tips/photos or LLM). Added `fetchPlaceSearch` and `buildFullResultsFromPlaces` in `lib/foursquare.ts` so the route can stream: (1) minimal results right after Foursquare, (2) full results after tips/photos, (3) enriched results after LLM. Frontend clears loading on first `results` chunk so the list appears immediately and updates in place as later chunks arrive.
+- **Streaming execute response**: `/api/execute` now streams NDJSON (interpreted first, then results) so the frontend can show the INTERPRETED block as soon as the LLM returns, then show results when Foursquare + LLM enrichment finish. Reduces perceived wait before any output.
 - **Parallel photo fetching**: Replaced sequential 3-second delay photo fetching with parallel batch processing using configurable concurrency (default: 2). Added `FOURSQUARE_PHOTOS_CONCURRENCY` env var. This reduces search latency from ~6s to ~2s for 3 places.
 
 ### Frontend Improvements

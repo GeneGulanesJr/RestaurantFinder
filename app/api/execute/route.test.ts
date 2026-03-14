@@ -9,14 +9,17 @@ vi.mock("@/lib/llm", () => ({
   interpretMessage: vi.fn(),
   enrichRecommendationsWithLLM: vi.fn(async () => []),
 }));
-vi.mock("@/lib/foursquare", () => ({ searchPlaces: vi.fn() }));
+vi.mock("@/lib/foursquare", () => ({
+  fetchPlaceSearch: vi.fn(),
+  buildFullResultsFromPlaces: vi.fn(),
+}));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(() => null),
   recordLimitUse: vi.fn(),
 }));
 
 import { interpretMessage } from "@/lib/llm";
-import { searchPlaces } from "@/lib/foursquare";
+import { fetchPlaceSearch, buildFullResultsFromPlaces } from "@/lib/foursquare";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 function createRequest(url: string): import("next/server").NextRequest {
@@ -32,7 +35,12 @@ describe("execute route - code param validation", () => {
       ok: true,
       params: { query: "pizza", near: "LA", limit: 10 },
     });
-    vi.mocked(searchPlaces).mockResolvedValue({ ok: true, results: [] });
+    vi.mocked(fetchPlaceSearch).mockResolvedValue({
+      ok: true,
+      places: [],
+      minimalResults: [],
+    });
+    vi.mocked(buildFullResultsFromPlaces).mockResolvedValue([]);
   });
 
   it("returns 401 when code is missing", async () => {
@@ -53,15 +61,22 @@ describe("execute route - code param validation", () => {
     expect(body).toEqual({ error: "Unauthorized" });
   });
 
-  it("returns 200 when code is pioneerdevai and message valid (mocked)", async () => {
+  it("returns 200 and streams NDJSON (interpreted then results)", async () => {
     const req = createRequest(
       "http://localhost/api/execute?message=pizza%20in%20LA&code=pioneerdevai"
     );
     const res = await GET(req);
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body).toHaveProperty("results");
-    expect(body).toHaveProperty("interpreted");
+    expect(res.headers.get("Content-Type")).toContain("application/x-ndjson");
+    const text = await res.text();
+    const lines = text.trim().split("\n").filter(Boolean);
+    expect(lines.length).toBeGreaterThanOrEqual(2);
+    const interpreted = JSON.parse(lines[0]) as { type: string; payload: unknown };
+    expect(interpreted.type).toBe("interpreted");
+    expect(interpreted.payload).toMatchObject({ query: "pizza", near: "LA", limit: 10 });
+    const results = JSON.parse(lines[1]) as { type: string; payload: unknown };
+    expect(results.type).toBe("results");
+    expect(Array.isArray(results.payload)).toBe(true);
   });
 });
 
@@ -91,7 +106,7 @@ describe("execute route - message validation", () => {
   });
 });
 
-describe("execute route - interpretation failure (422)", () => {
+describe("execute route - interpretation failure (streamed error)", () => {
   beforeEach(() => {
     process.env.OPENROUTER_API_KEY = "test-key";
     process.env.FOURSQUARE_API_KEY = "test-fs-key";
@@ -102,14 +117,18 @@ describe("execute route - interpretation failure (422)", () => {
     });
   });
 
-  it("returns 422 when interpretation fails", async () => {
+  it("returns 200 and streams error chunk when interpretation fails", async () => {
     const req = createRequest(
       "http://localhost/api/execute?message=hello&code=pioneerdevai"
     );
     const res = await GET(req);
-    expect(res.status).toBe(422);
-    const body = await res.json();
-    expect(body.error).toContain("interpret");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const lines = text.trim().split("\n").filter(Boolean);
+    expect(lines.length).toBe(1);
+    const msg = JSON.parse(lines[0]) as { type: string; payload: { error?: string; detail?: string } };
+    expect(msg.type).toBe("error");
+    expect(msg.payload.error).toContain("interpret");
   });
 });
 

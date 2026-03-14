@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
 const COOKIE_NAME = "rf_session";
-const DEFAULT_TTL_SEC = 7 * 24 * 60 * 60; // 7 days
+const DEFAULT_TTL_SEC = 4 * 60 * 60; // 4 hours
 
 function getSessionTTL(): number {
   const ttl = process.env.SESSION_TTL_SEC;

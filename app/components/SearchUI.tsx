@@ -195,9 +195,61 @@ export default function SearchUI() {
         return;
       }
 
-      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const errorValidationResult = apiErrorSchema.safeParse(data);
+        if (errorValidationResult.success) {
+          const err = errorValidationResult.data;
+          if (res.status === 429) {
+            const wait = err.retry_after ?? 60;
+            setError(`Too many requests. Please wait ${wait} seconds before trying again.`);
+            setRateLimitRemaining(wait);
+          } else {
+            setError(err.detail ?? err.error ?? "Something went wrong. Please try again.");
+          }
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
+        return;
+      }
 
-      if (res.ok) {
+      const contentType = res.headers.get("Content-Type") ?? "";
+      if (contentType.includes("application/x-ndjson") && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (requestId !== currentRequestRef.current) return;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
+            try {
+              const msg = JSON.parse(trimmedLine) as { type: string; payload: unknown };
+              if (msg.type === "interpreted") {
+                const payload = msg.payload as { query: string; near: string; limit: number };
+                setInterpreted(payload);
+              } else if (msg.type === "results") {
+                const validationResult = z.array(restaurantResultSchema).safeParse(msg.payload);
+                if (validationResult.success) {
+                  setResults(validationResult.data);
+                  setLoading(false);
+                }
+              } else if (msg.type === "error") {
+                const payload = msg.payload as { error?: string; detail?: string };
+                setError(payload.detail ?? payload.error ?? "Something went wrong. Please try again.");
+              }
+            } catch {
+              // ignore malformed lines
+            }
+          }
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
         const validationResult = apiSuccessSchema.safeParse(data);
         if (validationResult.success) {
           setResults(validationResult.data.results);
@@ -205,21 +257,6 @@ export default function SearchUI() {
         } else {
           setError("Invalid response from server. Please try again.");
         }
-        return;
-      }
-
-      const errorValidationResult = apiErrorSchema.safeParse(data);
-      if (errorValidationResult.success) {
-        const err = errorValidationResult.data;
-        if (res.status === 429) {
-          const wait = err.retry_after ?? 60;
-          setError(`Too many requests. Please wait ${wait} seconds before trying again.`);
-          setRateLimitRemaining(wait);
-        } else {
-          setError(err.detail ?? err.error ?? "Something went wrong. Please try again.");
-        }
-      } else {
-        setError("Something went wrong. Please try again.");
       }
     } catch {
       setError("Network error. Please try again.");

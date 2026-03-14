@@ -412,14 +412,18 @@ function mapPlaceToResult(
   };
 }
 
+export type FetchPlaceSearchResult =
+  | { ok: true; places: FoursquarePlace[]; minimalResults: RestaurantResult[] }
+  | { ok: false; status?: number; reason?: string };
+
 /**
- * Call Foursquare Place Search with validated SearchParams.
- * Returns mapped results or signals upstream error (502).
+ * Foursquare place search only (no tips, no photos). Returns places and minimal
+ * results for fast first paint; use buildFullResultsFromPlaces for tips/photos.
  */
-export async function searchPlaces(
+export async function fetchPlaceSearch(
   params: SearchParamsResolved,
   apiKey: string
-): Promise<FoursquareResult> {
+): Promise<FetchPlaceSearchResult> {
   const url = new URL(FOURSQUARE_BASE_URL);
   url.searchParams.set("query", params.query);
   url.searchParams.set("near", params.near);
@@ -460,12 +464,10 @@ export async function searchPlaces(
     }
 
     const text = await res.text();
-    
-    // Debug: log raw response
     if (process.env.NODE_ENV !== "production") {
       console.log("[Foursquare] Raw search response:", text.slice(0, 2000));
     }
-    
+
     let parsed: unknown;
     try {
       parsed = JSON.parse(text);
@@ -485,20 +487,8 @@ export async function searchPlaces(
     }
 
     const places = parsedResult.data.results;
-    const tipsById = await fetchTipsForPlaces(places, apiKey);
-    const photosById = await fetchPhotosForPlaces(places, apiKey);
-
-    const results = places.map((place) =>
-      mapPlaceToResult(place, params, {
-        tipText: place.fsq_id ? tipsById.get(place.fsq_id) : undefined,
-        photoUrls: place.fsq_id 
-          ? photosById.get(place.fsq_id) 
-          : place.fsq_place_id 
-            ? photosById.get(place.fsq_place_id)
-            : undefined,
-      })
-    );
-    return { ok: true, results };
+    const minimalResults = places.map((place) => mapPlaceToResult(place, params, {}));
+    return { ok: true, places, minimalResults };
   } catch (err) {
     clearTimeout(timeoutId);
     if (process.env.NODE_ENV !== "production") {
@@ -506,4 +496,41 @@ export async function searchPlaces(
     }
     return { ok: false };
   }
+}
+
+/**
+ * Fetch tips and photos for places and map to full RestaurantResult[].
+ * Use after fetchPlaceSearch to get results with descriptions and photos.
+ */
+export async function buildFullResultsFromPlaces(
+  places: FoursquarePlace[],
+  params: SearchParamsResolved,
+  apiKey: string
+): Promise<RestaurantResult[]> {
+  const tipsById = await fetchTipsForPlaces(places, apiKey);
+  const photosById = await fetchPhotosForPlaces(places, apiKey);
+  return places.map((place) =>
+    mapPlaceToResult(place, params, {
+      tipText: place.fsq_id ? tipsById.get(place.fsq_id) : undefined,
+      photoUrls: place.fsq_id
+        ? photosById.get(place.fsq_id)
+        : place.fsq_place_id
+          ? photosById.get(place.fsq_place_id)
+          : undefined,
+    })
+  );
+}
+
+/**
+ * Call Foursquare Place Search with validated SearchParams.
+ * Returns mapped results (with tips and photos) or signals upstream error (502).
+ */
+export async function searchPlaces(
+  params: SearchParamsResolved,
+  apiKey: string
+): Promise<FoursquareResult> {
+  const r = await fetchPlaceSearch(params, apiKey);
+  if (!r.ok) return r;
+  const results = await buildFullResultsFromPlaces(r.places, params, apiKey);
+  return { ok: true, results };
 }
