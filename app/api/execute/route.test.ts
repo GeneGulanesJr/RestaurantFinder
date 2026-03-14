@@ -104,6 +104,70 @@ describe("execute route - message validation", () => {
     const res = await GET(req);
     expect(res.status).toBe(400);
   });
+
+  it("returns 400 when message exceeds max length", async () => {
+    const longMessage = "x".repeat(2001);
+    const req = createRequest(
+      `http://localhost/api/execute?code=pioneerdevai&message=${encodeURIComponent(longMessage)}`
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("too long");
+  });
+});
+
+describe("execute route - invalid structured param (422)", () => {
+  beforeEach(() => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+    process.env.FOURSQUARE_API_KEY = "test-fs-key";
+    process.env.AUTH_CODE = "pioneerdevai";
+    vi.mocked(interpretMessage).mockResolvedValue({
+      ok: true,
+      params: { query: "pizza", near: "LA", limit: 10 },
+    });
+  });
+
+  it("returns 422 when structured is not valid JSON", async () => {
+    const req = createRequest(
+      "http://localhost/api/execute?message=hello&code=pioneerdevai&structured=not-valid-json"
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error).toContain("structured");
+  });
+});
+
+describe("execute route - Foursquare upstream failure (streamed error)", () => {
+  beforeEach(() => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+    process.env.FOURSQUARE_API_KEY = "test-fs-key";
+    process.env.AUTH_CODE = "pioneerdevai";
+    vi.mocked(interpretMessage).mockResolvedValue({
+      ok: true,
+      params: { query: "pizza", near: "LA", limit: 10 },
+    });
+    vi.mocked(fetchPlaceSearch).mockResolvedValue({
+      ok: false,
+      status: 502,
+      reason: "Service unavailable",
+    });
+  });
+
+  it("returns 200 and streams error chunk when Foursquare fails", async () => {
+    const req = createRequest(
+      "http://localhost/api/execute?message=pizza%20in%20LA&code=pioneerdevai"
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const lines = text.trim().split("\n").filter(Boolean);
+    const errorLine = lines.find((l) => (JSON.parse(l) as { type: string }).type === "error");
+    expect(errorLine).toBeTruthy();
+    const msg = JSON.parse(errorLine!) as { type: string; payload: { error?: string } };
+    expect(msg.payload.error).toBeDefined();
+  });
 });
 
 describe("execute route - interpretation failure (streamed error)", () => {

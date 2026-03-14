@@ -75,11 +75,11 @@ restaurant-finder/
 ```
 User Request
     ↓
-GET /api/execute?message=...&code=pioneerdevai
+GET /api/execute?message=...
     ↓
 ┌─────────────────────────────────────────┐
 │  Authentication Gate                    │
-│  - Validate code === "pioneerdevai"     │
+│  - Validate session cookie              │
 │  - Return 401 if invalid                │
 └─────────────────────────────────────────┘
     ↓
@@ -167,6 +167,7 @@ cp .env.example .env
 | `SESSION_TTL_SEC` | No | Session time-to-live in seconds. | `604800` (7 days) |
 | `OPENROUTER_TIMEOUT_MS` | No | OpenRouter API timeout in milliseconds. | `15000` (15 seconds) |
 | `FOURSQUARE_TIMEOUT_MS` | No | Foursquare API timeout in milliseconds. | `15000` (15 seconds) |
+| `AUTH_CODE` | No | If set, allows `GET /api/execute?message=...&code=<value>` without a session. For the required API contract, set to `pioneerdevai`. Leave empty in production to require session only. | (empty) |
 
 See `.env.example` for placeholders.
 
@@ -242,9 +243,9 @@ Open [http://localhost:3000](http://localhost:3000). You will be redirected to `
 **GET** `/api/execute` with query parameters:
 
 - `message` (required): natural language request, e.g. `Find cheap sushi in downtown LA open now`. Trimmed; max 2000 chars.
-- **Authentication**: Requires valid session cookie (obtained via `/api/login`). No `code` parameter needed.
+- **Authentication**: Either (1) a valid session cookie (obtained via `/api/login`), or (2) when `AUTH_CODE` is set in the environment, the query parameter `code` must equal that value (e.g. `code=pioneerdevai` for the required API contract).
 
-Example:
+**Example with session (browser or curl with cookies):**
 
 ```bash
 # First, login to get session cookie
@@ -258,8 +259,16 @@ curl "http://localhost:3000/api/execute?message=Find%20pizza%20in%20Los%20Angele
   -b cookies.txt
 ```
 
-- **200**: `{ "results": [...], "interpreted": { "query", "near", "limit", ... } }`
-- **401**: `{ "error": "Unauthorized" }` — missing or invalid session
+**Example with code parameter (for API testing; requires `AUTH_CODE=pioneerdevai` in `.env`):**
+
+```bash
+curl "http://localhost:3000/api/execute?message=Find%20me%20a%20cheap%20sushi%20restaurant%20in%20downtown%20Los%20Angeles%20open%20now&code=pioneerdevai"
+```
+
+The response is **NDJSON** (newline-delimited JSON): each line is a JSON object with `type` and `payload` (e.g. `interpreted`, `results`, or `error`). The last `results` payload is the full list of restaurants.
+
+- **200**: NDJSON stream with `interpreted` and `results` (and optionally enriched `results`) lines.
+- **401**: `{ "error": "Unauthorized" }` — missing or invalid session, or missing/wrong `code` when using code auth
 - **400**: missing/empty/whitespace or too-long `message`
 - **422**: interpretation failed (malformed or uninterpretable message)
 - **429**: rate limit exceeded (see below)
@@ -318,7 +327,7 @@ curl "http://localhost:3000/api/execute?message=Find%20pizza%20in%20Los%20Angele
 
 | Status | Body | Description |
 |--------|------|-------------|
-| 401 | `{ "error": "Unauthorized" }` | Missing or invalid session cookie |
+| 401 | `{ "error": "Unauthorized" }` | Missing or invalid session, or missing/wrong `code` (when using code auth) |
 | 403 | `{ "error": "Forbidden", "detail": "..." }` | Invalid CSRF token (production only) |
 | 400 | `{ "error": "message parameter is required" }` | Missing, empty, or whitespace-only `message` |
 | 400 | `{ "error": "message too long (max 2000 characters)" }` | Message exceeds character limit |
@@ -339,8 +348,8 @@ curl "http://localhost:3000/api/execute?message=Find%20pizza%20in%20Los%20Angele
 
 - **Runner**: [Vitest](https://vitest.dev) (`npm run test`).
 - **What is tested**:
-  - Execute route: `code` validation (missing, wrong, correct), `message` validation (missing, whitespace), interpretation failure (422), rate limit (429).
-  - LLM (`lib/llm.ts`): invalid JSON response, SearchParams validation failure, uninterpretable response, valid response with default limit.
+  - Execute route: `code` validation (missing, wrong, correct), `message` validation (missing, whitespace, too long → 400), invalid `structured` param (non-JSON → 422), interpretation failure (streamed error), Foursquare upstream failure (streamed error), rate limit (429).
+  - LLM (`lib/llm.ts`): invalid JSON response, SearchParams validation (empty query fallback, uninterpretable), valid response with default limit.
   - Foursquare (`lib/foursquare.ts`): non-JSON response, schema validation failure, successful response mapping.
   - Login API: valid `demo` / `1234` (200 + session cookie), invalid credentials (401).
 - **Not covered**: E2E/browser tests; live OpenRouter/Foursquare calls (tests mock `fetch`).
@@ -349,13 +358,20 @@ curl "http://localhost:3000/api/execute?message=Find%20pizza%20in%20Los%20Angele
 npm run test
 ```
 
+## Assumptions and limitations
+
+- **Authentication**: The UI uses session-based login; the same `/api/execute` endpoint also accepts `code=<AUTH_CODE>` for direct API calls. For the required API contract, set `AUTH_CODE` to the value given in the assignment (e.g. in `requirements.md`).
+- **Response format**: The API returns NDJSON (streaming). Consumers that expect a single JSON object should read the stream and use the last `results` line (or aggregate all `results` payloads).
+- **Rate limiting**: One search per rolling 60 seconds per client (IP-based in production). Local dev uses an in-memory store; production should use a shared store (e.g. Durable Object or KV).
+- **Relevance**: Results are filtered by the interpreted params (query, location, price, open_now) via the Foursquare API; no post-filtering of irrelevant venues is applied beyond that.
+
 ## Troubleshooting
 
 ### Common Issues
 
 **Issue: "Unauthorized" (401) when calling API**
-- **Cause**: Missing or incorrect `code` parameter
-- **Solution**: Ensure `code=pioneerdevai` is included in the query string
+- **Cause**: Missing or invalid session cookie, or (when using the code parameter) missing or wrong `code` or `AUTH_CODE` not set in environment.
+- **Solution**: Use session (log in via `/api/login`) or set `AUTH_CODE=pioneerdevai` in `.env` and call with `code=pioneerdevai`.
 
 **Issue: "Could not interpret request" (422)**
 - **Cause**: LLM unable to parse the natural language message

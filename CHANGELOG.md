@@ -23,7 +23,9 @@
 
 ### Documentation
 
-- **Interface quality audit**: Added `docs/audit-report.md` with a full audit across accessibility, performance, theming, responsive design, and anti-patterns (frontend-design skill). Report lists 24 findings by severity, anti-patterns verdict, positive findings, and suggested fix commands (`/harden`, `/adapt`, `/normalize`, etc.). No code changes—audit only.
+- **Tests and README**: Added execute-route tests for message too long (400), invalid `structured` param (422), and Foursquare upstream failure (streamed error). Updated README Testing section and fixed remaining literal auth code in Assumptions.
+- **README requirements alignment**: Documented `AUTH_CODE` in the environment variables table; added "Test the API" instructions for the code-based API contract (example curl uses placeholder; value comes from assignment/requirements); clarified NDJSON response; added "Assumptions and limitations" section; updated 401 and troubleshooting. Removed literal auth code from README to avoid exposing it in the public repo—evaluators use the value from the assignment doc.
+- **README authentication update**: Updated README.md to reflect session-based authentication, removing outdated `code=pioneerdevai` parameter references from architecture diagram and troubleshooting section. Added `docs/audit-report.md` with a full audit across accessibility, performance, theming, responsive design, and anti-patterns (frontend-design skill). Report lists 24 findings by severity, anti-patterns verdict, positive findings, and suggested fix commands (`/harden`, `/adapt`, `/normalize`, etc.). No code changes—audit only.
 - **OpenSpec change: fix-audit-issues**: Added `openspec/changes/fix-audit-issues/` with proposal, design, specs (audit-remediation), and tasks to implement critical and high-severity audit fixes (search label, touch targets, ARIA, motion, theming token, stable keys, dead code, unused CSS).
 
 ### Security Improvements
