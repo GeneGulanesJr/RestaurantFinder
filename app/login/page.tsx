@@ -148,7 +148,7 @@ export default function LoginPage() {
         </div>
         
         <p className="mt-6 text-center text-xs text-muted">
-          Enter any username and password to explore
+          Demo: username <strong>demo</strong>, password <strong>1234</strong>
         </p>
       </div>
     </main>
