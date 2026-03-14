@@ -14,7 +14,7 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-10">
+    <main className="min-h-screen bg-pattern">
       <SearchUI />
     </main>
   );

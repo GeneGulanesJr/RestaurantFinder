@@ -174,20 +174,20 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
     >
       <div
         ref={dialogRef}
-        className="rf-reveal flex max-h-[min(700px,95vh)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
+        className="rf-reveal flex max-h-[min(700px,95vh)] w-full max-w-2xl flex-col overflow-hidden rounded-md border border-border bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-border bg-card px-4 py-3 sm:px-5 sm:py-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Refine search</p>
           <h2 id="search-refinement-title" className="mt-1 text-base font-semibold text-fg">
-            Build your perfect search
+            Narrow your search
           </h2>
           <p className="mt-2 line-clamp-2 text-xs text-muted">
-            We’ll use a few quick choices to turn your message into a complete, filterable search.
+            Pick options below to filter your results.
           </p>
 
-          <div className="mt-3 rounded-lg border border-border bg-bg px-3 py-2 text-xs text-muted">
-            <span className="text-[11px] uppercase tracking-wide text-muted">You said</span>
+          <div className="mt-3 rounded-sm border border-border bg-bg px-3 py-2 text-xs text-muted">
+            <span className="text-[11px] uppercase tracking-wide text-muted">Your search</span>
             <p className="mt-1 line-clamp-2 text-sm text-fg">{originalMessage}</p>
           </div>
 
@@ -196,9 +196,9 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
               <span>Progress</span>
               <span>{Math.round(progressPercent)}% complete</span>
             </div>
-            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-border/60">
+            <div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-border/60">
               <div
-                className="h-full rounded-full bg-accent transition-[width] duration-300"
+                className="h-full rounded-sm bg-accent transition-[width] duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -215,7 +215,7 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
                   type="button"
                   ref={tpl.id === "quick-lunch" ? firstFocusableRef : undefined}
                   onClick={() => onChangeRequest(applyTemplate(tpl.id, inProgressRequest))}
-                  className="rf-btn-motion rf-focusable inline-flex min-w-[9rem] flex-col items-start rounded-lg border border-border bg-bg px-3 py-2 text-left text-xs hover:border-accent hover:bg-accent/5 focus-visible:rf-focus"
+                  className="rf-btn-motion rf-focusable inline-flex min-w-[9rem] min-h-[44px] flex-col items-start rounded-sm border border-border bg-bg px-3 py-2 text-left text-xs hover:border-accent hover:bg-accent/5 focus-visible:rf-focus"
                 >
                   <span className="text-[11px] font-medium text-fg">{tpl.label}</span>
                   <span className="mt-0.5 text-[11px] text-muted">{tpl.description}</span>
@@ -243,7 +243,7 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
                         })
                       }
                       className={[
-                        "rf-btn-motion rf-focusable inline-flex items-center rounded-full border px-3 py-1 text-xs",
+                        "rf-btn-motion rf-focusable inline-flex min-h-[44px] items-center rounded-sm border px-3 py-1 text-xs",
                         selected
                           ? "border-accent bg-accent/10 text-fg"
                           : "border-border bg-bg text-muted hover:border-accent/70 hover:text-fg",
@@ -273,7 +273,7 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
                         })
                       }
                       className={[
-                        "rf-btn-motion rf-focusable inline-flex items-center rounded-full border px-3 py-1 text-xs",
+                        "rf-btn-motion rf-focusable inline-flex min-h-[44px] items-center rounded-sm border px-3 py-1 text-xs",
                         inProgressRequest.priceRange === option.id
                           ? "border-accent bg-accent/10 text-fg"
                           : "border-border bg-bg text-muted hover:border-accent/70 hover:text-fg",
@@ -301,7 +301,7 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
                         })
                       }
                       className={[
-                        "rf-btn-motion rf-focusable inline-flex items-center rounded-full border px-3 py-1 text-xs",
+                        "rf-btn-motion rf-focusable inline-flex min-h-[44px] items-center rounded-sm border px-3 py-1 text-xs",
                         inProgressRequest.maxDistanceMeters === option.id
                           ? "border-accent bg-accent/10 text-fg"
                           : "border-border bg-bg text-muted hover:border-accent/70 hover:text-fg",
@@ -331,7 +331,7 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
                         })
                       }
                       className={[
-                        "rf-btn-motion rf-focusable inline-flex items-center rounded-full border px-3 py-1 text-xs",
+                        "rf-btn-motion rf-focusable inline-flex min-h-[44px] items-center rounded-sm border px-3 py-1 text-xs",
                         inProgressRequest.minRating === option.id
                           ? "border-accent bg-accent/10 text-fg"
                           : "border-border bg-bg text-muted hover:border-accent/70 hover:text-fg",
@@ -355,7 +355,7 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
                       })
                     }
                     className={[
-                      "rf-btn-motion rf-focusable inline-flex items-center rounded-full border px-3 py-1 text-xs",
+                      "rf-btn-motion rf-focusable inline-flex min-h-[44px] items-center rounded-sm border px-3 py-1 text-xs",
                       inProgressRequest.openNow === true
                         ? "border-accent bg-accent/10 text-fg"
                         : "border-border bg-bg text-muted hover:border-accent/70 hover:text-fg",
@@ -372,13 +372,13 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
                       })
                     }
                     className={[
-                      "rf-btn-motion rf-focusable inline-flex items-center rounded-full border px-3 py-1 text-xs",
+                      "rf-btn-motion rf-focusable inline-flex min-h-[44px] items-center rounded-sm border px-3 py-1 text-xs",
                       inProgressRequest.openNow === false
                         ? "border-accent bg-accent/10 text-fg"
                         : "border-border bg-bg text-muted hover:border-accent/70 hover:text-fg",
                     ].join(" ")}
                   >
-                    Doesn&apos;t matter
+                    No preference
                   </button>
                 </div>
               </div>
@@ -390,22 +390,22 @@ export function SearchRefinementModal(props: SearchRefinementModalProps) {
           <button
             type="button"
             onClick={() => onSkip(inProgressRequest)}
-            className="rf-focusable text-xs text-muted underline decoration-border underline-offset-4 hover:text-fg focus-visible:rf-focus"
+            className="rf-focusable min-h-[44px] text-xs text-muted underline decoration-border underline-offset-4 hover:text-fg focus-visible:rf-focus"
           >
-            Skip and search anyway
+            Search without filters
           </button>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="rf-focusable rounded-lg border border-border bg-bg px-3 py-1.5 text-xs font-medium text-muted hover:text-fg focus-visible:rf-focus"
+              className="rf-focusable rounded-sm border border-border bg-bg px-3 py-1.5 text-xs font-medium text-muted hover:text-fg focus-visible:rf-focus min-h-[44px] min-w-[44px]"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={() => onApply(inProgressRequest)}
-              className="rf-btn-motion rf-focusable rounded-lg bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-ink shadow-sm hover:bg-accent/90 focus-visible:rf-focus"
+              className="rf-btn-motion rf-focusable rounded-sm bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-ink shadow-sm hover:bg-accent/90 focus-visible:rf-focus min-h-[44px] min-w-[44px]"
             >
               Show results
             </button>

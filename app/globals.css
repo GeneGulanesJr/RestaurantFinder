@@ -4,29 +4,47 @@
 
 @layer base {
   :root {
-    /* Color system (modern, neutral + tomato accent) */
-    --rf-bg: 0.99 0.01 260;          /* soft neutral */
-    --rf-surface: 1 0 0;             /* white */
-    --rf-card: 0.995 0.004 260;      /* very light neutral card */
-    --rf-border: 0.86 0.02 260;      /* cool border */
-    --rf-text: 0.24 0.03 260;        /* charcoal text */
-    --rf-muted: 0.55 0.02 260;       /* muted grey */
-    --rf-accent: 0.68 0.16 28;       /* tomato accent */   
-    --rf-accent-2: 0.65 0.14 28;     /* slightly darker tomato */
-    --rf-accent-ink: 0.3 0.03 260;   /* text on accent */
-    --rf-danger: 0.62 0.18 28;
-    --rf-danger-surface: 0.98 0.03 28;
+    /* Warm, appetizing color palette - terracotta & spice tones */
+    --rf-bg: 0.985 0.02 40;           /* warm off-white background */
+    --rf-surface: 1 0 0;              /* pure white for cards */
+    --rf-card: 0.98 0.02 45;           /* warm cream card */
+    --rf-border: 0.85 0.05 40;        /* warm grey border */
+    --rf-text: 0.25 0.04 35;          /* warm dark text */
+    --rf-muted: 0.5 0.04 40;          /* warm muted grey */
+    
+    /* Primary accent - terracotta/spice orange */
+    --rf-accent: 0.65 0.18 25;        /* terracotta */
+    --rf-accent-2: 0.6 0.16 20;       /* darker terracotta */
+    --rf-accent-3: 0.7 0.2 35;        /* lighter warm orange */
+    --rf-accent-ink: 1 0 0;           /* text on accent */
+    
+    /* Secondary - warm olive for ratings */
+    --rf-success: 0.4 0.15 120;       /* olive green */
+    --rf-success-surface: 0.95 0.05 120;
+    
+    /* Danger */
+    --rf-danger: 0.6 0.18 15;          /* warm red */
+    --rf-danger-surface: 0.98 0.03 20;
 
-    /* Typography (set via next/font in layout) */
+    /* Rating - warm amber/gold for star ratings */
+    --rf-rating: 0.6 0.18 45;           /* warm amber/gold */
+
+    /* Typography */
     --rf-font-sans: ui-sans-serif, system-ui, sans-serif;
     --rf-font-display: ui-serif, Georgia, serif;
 
-    /* Spacing rhythm */
+    /* Spacing */
     --rf-space-2: 0.5rem;
     --rf-space-3: 0.75rem;
     --rf-space-4: 1rem;
     --rf-space-6: 1.5rem;
     --rf-space-8: 2rem;
+    --rf-space-12: 3rem;
+
+    /* Shadows (design tokens; softer for refined look) */
+    --rf-shadow-card: 0 4px 16px -4px rgba(0, 0, 0, 0.08);
+    --rf-shadow-soft: 0 8px 24px -8px rgba(0, 0, 0, 0.1);
+    --rf-shadow-hover: 0 12px 32px -8px rgba(0, 0, 0, 0.14);
   }
 
   html {
@@ -34,26 +52,43 @@
   }
 
   body {
-    background: oklch(var(--rf-bg));
+    background:
+      radial-gradient(ellipse at 0% 0%, oklch(var(--rf-accent) / 0.02) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, oklch(var(--rf-accent-3) / 0.025) 0%, transparent 50%),
+      linear-gradient(180deg, oklch(var(--rf-bg)) 0%, oklch(0.98 0.02 45) 100%);
+    background-attachment: fixed;
     color: oklch(var(--rf-text));
     font-family: var(--rf-font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: geometricPrecision;
+    min-height: 100vh;
   }
-
 }
 
-/* Motion: ease-out curves (no bounce/elastic) */
+/* Motion: smooth easing */
 :root {
-  --rf-ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --rf-ease-out: cubic-bezier(0.33, 1, 0.68, 1);
   --rf-ease-out-quick: cubic-bezier(0.22, 1, 0.36, 1);
-  --rf-duration-enter: 320ms;
+  --rf-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --rf-duration-enter: 500ms;
   --rf-duration-feedback: 150ms;
-  --rf-duration-reveal: 220ms;
+  --rf-duration-reveal: 400ms;
 }
 
-/* Entrance: fade + slide up (refined minimal) */
+/* Entrance: subtle fade + slide up (no overshoot, quieter) */
 @keyframes rf-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Reveal: smooth fade up (quieter distance) */
+@keyframes rf-reveal {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -64,13 +99,55 @@
   }
 }
 
-/* State reveal: fade only (error, results, interpreted) */
-@keyframes rf-reveal {
+/* Staggered children for lists (quieter) */
+@keyframes rf-stagger-in {
   from {
     opacity: 0;
+    transform: translateY(10px) scale(0.99);
   }
   to {
     opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Gentle pulse for badges */
+@keyframes rf-pulse-gentle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Spinner for loading */
+@keyframes rf-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Shimmer effect for skeleton loading */
+@keyframes rf-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Float animation for decorative elements (quieter) */
+@keyframes rf-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
   }
 }
 
@@ -79,45 +156,107 @@
     outline: none;
     box-shadow:
       0 0 0 2px oklch(var(--rf-bg)),
-      0 0 0 4px color-mix(in oklch, oklch(var(--rf-accent)) 70%, oklch(var(--rf-border)));
+      0 0 0 4px color-mix(in oklch, oklch(var(--rf-accent)) 60%, oklch(var(--rf-border)));
   }
 
   .rf-focusable {
-    transition: box-shadow var(--rf-duration-feedback) var(--rf-ease-out);
+    transition: box-shadow var(--rf-duration-feedback) var(--rf-ease-out-quick), 
+                transform var(--rf-duration-feedback) var(--rf-ease-out-quick),
+                border-color var(--rf-duration-feedback) var(--rf-ease-out-quick);
   }
 
   .rf-enter {
     animation: rf-enter var(--rf-duration-enter) var(--rf-ease-out) both;
   }
 
-  .rf-enter-delay-1 { animation-delay: 60ms; }
-  .rf-enter-delay-2 { animation-delay: 120ms; }
-  .rf-enter-delay-3 { animation-delay: 180ms; }
-  .rf-enter-delay-4 { animation-delay: 240ms; }
+  .rf-enter-delay-1 { animation-delay: 80ms; }
+  .rf-enter-delay-2 { animation-delay: 160ms; }
+  .rf-enter-delay-3 { animation-delay: 240ms; }
+  .rf-enter-delay-4 { animation-delay: 320ms; }
+  .rf-enter-delay-5 { animation-delay: 400ms; }
 
   .rf-reveal {
-    animation: rf-reveal var(--rf-duration-reveal) var(--rf-ease-out) both;
+    animation: rf-reveal var(--rf-duration-reveal) var(--rf-ease-smooth) both;
   }
+
+  .rf-stagger > * {
+    animation: rf-stagger-in var(--rf-duration-enter) var(--rf-ease-out) both;
+  }
+  .rf-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .rf-stagger > *:nth-child(2) { animation-delay: 60ms; }
+  .rf-stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .rf-stagger > *:nth-child(4) { animation-delay: 180ms; }
+  .rf-stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .rf-stagger > *:nth-child(6) { animation-delay: 300ms; }
 
   .rf-btn-motion {
-    transition: transform var(--rf-duration-feedback) var(--rf-ease-out-quick);
+    transition: transform var(--rf-duration-feedback) var(--rf-ease-out-quick), 
+                background-color var(--rf-duration-feedback) var(--rf-ease-out-quick),
+                box-shadow var(--rf-duration-feedback) var(--rf-ease-out-quick);
   }
   .rf-btn-motion:hover {
-    transform: scale(1.02);
+    transform: translateY(-2px);
   }
   .rf-btn-motion:active {
-    transform: scale(0.98);
+    transform: translateY(0) scale(0.99);
   }
 
-  .rf-accent-sheen {
-    background:
-      linear-gradient(
-        95deg,
-        oklch(var(--rf-accent) / 0.22),
-        oklch(var(--rf-accent-2) / 0.18),
-        oklch(var(--rf-accent) / 0.12)
-      );
+  .rf-loading-dots span {
+    animation: rf-pulse-gentle 1.2s ease-in-out infinite;
   }
+  .rf-loading-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .rf-loading-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  .rf-spinner {
+    animation: rf-spin 0.8s linear infinite;
+  }
+
+  .rf-shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(var(--rf-card)) 0%,
+      oklch(var(--rf-surface)) 50%,
+      oklch(var(--rf-card)) 100%
+    );
+    background-size: 200% 100%;
+    animation: rf-shimmer 1.5s ease-in-out infinite;
+  }
+
+  .rf-float {
+    animation: rf-float 3s ease-in-out infinite;
+  }
+}
+
+/* Decorative background shapes (quieter) */
+.bg-pattern {
+  background-image:
+    radial-gradient(circle at 0% 0%, oklch(var(--rf-accent) / 0.025) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, oklch(var(--rf-accent-3) / 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, oklch(var(--rf-accent) / 0.015) 0%, transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: oklch(var(--rf-bg));
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--rf-border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--rf-muted));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -133,4 +272,3 @@
     transition-duration: 0.01ms !important;
   }
 }
-

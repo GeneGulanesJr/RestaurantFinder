@@ -1,11 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+const UtensilsIcon = ({ className }: { className?: string }) => (
+  <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+    <path d="M7 2v20" />
+    <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+  </svg>
+);
+
+const ArrowRightIcon = ({ className }: { className?: string }) => (
+  <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </svg>
+);
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string>("");
+  const router = useRouter();
 
   // Fetch CSRF token on component mount
   useEffect(() => {
@@ -17,7 +34,6 @@ export default function LoginPage() {
           setCsrfToken(data.csrf_token);
         }
       } catch {
-        // If CSRF token fetch fails, continue without it (for dev mode)
         console.warn("Failed to fetch CSRF token");
       }
     }
@@ -42,34 +58,41 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        window.location.href = "/";
+        router.push("/");
         return;
       }
       setError(data.error ?? "Invalid username or password");
     } catch {
-      setError("Something went wrong");
+      setError("We couldn’t sign you in. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen px-4 py-10">
-      <div className="mx-auto w-full max-w-md">
-        <div className="rf-enter rounded-xl border border-border bg-surface shadow-soft">
-          <div className="px-6 pt-6 pb-5">
-            <h1 className="font-display text-4xl leading-[1.05] tracking-tight">
-              Restaurant Finder
-              <span className="align-top text-accent">.</span>
+    <main className="min-h-screen bg-pattern flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md">
+        
+        <div className="rf-enter rounded-md border border-border/60 bg-surface shadow-card overflow-hidden">
+          
+          <div className="p-8 sm:p-10">
+            {/* Logo: solid accent (no gradient) */}
+            <div className="flex justify-center mb-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-md bg-accent">
+                <UtensilsIcon className="h-7 w-7 text-accent-ink" />
+              </div>
+            </div>
+            
+            <h1 className="font-display text-center text-2xl font-semibold text-fg tracking-tight">
+              Welcome to Restaurant Finder
             </h1>
-            <p className="mt-2 text-sm text-muted">
-              Sign in, then type what you want—price, vibes, “open now”… we’ll do the parsing.
+            <p className="mt-2 text-center text-sm text-muted">
+              Sign in to discover your next favorite spot
             </p>
-          </div>
-          <div className="px-6 pb-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div>
-                <label htmlFor="username" className="block text-sm font-medium">
+                <label htmlFor="username" className="block text-sm font-medium text-fg">
                   Username
                 </label>
                 <input
@@ -79,11 +102,12 @@ export default function LoginPage() {
                   autoComplete="username"
                   required
                   disabled={loading}
-                  className="rf-focusable mt-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted/70 shadow-sm focus-visible:rf-focus disabled:opacity-50"
+                  className="rf-focusable mt-2 w-full rounded-md border border-border/50 bg-card px-4 py-3 text-fg placeholder:text-muted/50 shadow-sm focus-visible:rf-focus disabled:opacity-60"
                 />
               </div>
+              
               <div>
-                <label htmlFor="password" className="block text-sm font-medium">
+                <label htmlFor="password" className="block text-sm font-medium text-fg">
                   Password
                 </label>
                 <input
@@ -93,33 +117,38 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   required
                   disabled={loading}
-                  className="rf-focusable mt-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted/70 shadow-sm focus-visible:rf-focus disabled:opacity-50"
+                  className="rf-focusable mt-2 w-full rounded-md border border-border/50 bg-card px-4 py-3 text-fg placeholder:text-muted/50 shadow-sm focus-visible:rf-focus disabled:opacity-60"
                 />
               </div>
+              
               {error && (
-                <div
-                  className="rf-reveal rounded-lg border border-danger/30 bg-danger-surface px-3 py-2 text-sm text-fg"
-                  role="alert"
-                >
-                  {error}
+                <div role="alert" className="rounded-md border border-danger/30 bg-danger-surface px-4 py-3">
+                  <p className="text-sm text-danger">{error}</p>
                 </div>
               )}
+              
               <button
                 type="submit"
                 disabled={loading}
-                className="rf-btn-motion rf-focusable w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-ink shadow-sm transition-colors hover:bg-accent/90 focus-visible:rf-focus disabled:opacity-50 disabled:transform-none"
+                className="rf-btn-motion rf-focusable w-full inline-flex items-center justify-center gap-2 rounded-md bg-accent py-3.5 font-semibold text-accent-ink shadow-card hover:bg-accent/90 hover:shadow-hover focus-visible:rf-focus disabled:opacity-60 disabled:transform-none"
               >
-                {loading ? "Signing in…" : "Sign in"}
+                {loading ? (
+                  <span className="rf-loading-dots text-sm">
+                    <span>.</span><span>.</span><span>.</span>
+                  </span>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </>
+                )}
               </button>
             </form>
-            <p className="mt-4 text-center text-xs text-muted">
-              Demo: username <strong className="text-fg">demo</strong>, password{" "}
-              <strong className="text-fg">1234</strong>
-            </p>
           </div>
         </div>
-        <p className="rf-enter rf-enter-delay-1 mt-6 text-center text-xs text-muted">
-          Tip: After login, try “cheap ramen near downtown, open now” for a fast sanity check.
+        
+        <p className="mt-6 text-center text-xs text-muted">
+          Enter any username and password to explore
         </p>
       </div>
     </main>

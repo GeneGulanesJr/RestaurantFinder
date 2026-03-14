@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Fraunces, Instrument_Sans } from "next/font/google";
+import { Outfit, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const sans = Instrument_Sans({
+const sans = Outfit({
   subsets: ["latin"],
   variable: "--rf-font-sans",
   display: "swap",
 });
 
-const display = Fraunces({
+const display = Playfair_Display({
   subsets: ["latin"],
   variable: "--rf-font-display",
   display: "swap",
@@ -35,7 +35,13 @@ export default function RootLayout({
         <meta name="PerplexityBot" content="noindex, nofollow" />
         <meta name="Google-Extended" content="noindex, nofollow" />
       </head>
-      <body className="bg-bg text-fg">{children}</body>
+      <body className="bg-bg text-fg bg-pattern min-h-screen">
+        <div className="relative min-h-screen">
+          {/* Single solid accent line — avoids generic gradient stripe */}
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/80" />
+          {children}
+        </div>
+      </body>
     </html>
   );
 }

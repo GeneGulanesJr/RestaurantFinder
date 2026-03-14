@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+### Design system & polish (normalize / quieter / optimize)
+
+- **Design tokens for shadows**: Added `--rf-shadow-card`, `--rf-shadow-soft`, and `--rf-shadow-hover` in `globals.css` and wired Tailwind `boxShadow` to use them. Replaced hard-coded `rgba` shadows with softer values for a more refined look.
+- **Quieter motion and background**: Reduced entrance animation distance and scale (rf-enter, rf-reveal, rf-stagger-in), gentler button hover lift (`translateY(-2px)`), softer active state, and smaller float animation. Softened body and `.bg-pattern` gradient opacities.
+- **Optimize (CLS)**: Result details modal photos now use explicit `width={112}` and `height={112}` plus `decoding="async"` to avoid layout shift and improve LCP/CLS.
+
+### Accessibility & UI Quality
+
+- **Fixed audit issues**: Implemented all critical and high-severity fixes from the interface quality audit:
+  - Added `--rf-rating` token for star ratings (warm amber/gold color)
+  - Removed bounce animation from `rf-enter` keyframes (smooth ease-out only)
+  - Removed unused `.rf-gradient-text` and `.rf-glass` utilities
+  - Added visible label for search input (WCAG 3.3.2)
+  - Added `aria-hidden="true"` to decorative SVGs across all components
+  - Removed unused `usePrefersReducedMotion` hook
+  - Used stable React keys for result list items
+  - Increased touch targets to 44×44px for interactive elements
+  - Added `role="alert"` to login error messages
+
+### Documentation
+
+- **Interface quality audit**: Added `docs/audit-report.md` with a full audit across accessibility, performance, theming, responsive design, and anti-patterns (frontend-design skill). Report lists 24 findings by severity, anti-patterns verdict, positive findings, and suggested fix commands (`/harden`, `/adapt`, `/normalize`, etc.). No code changes—audit only.
+- **OpenSpec change: fix-audit-issues**: Added `openspec/changes/fix-audit-issues/` with proposal, design, specs (audit-remediation), and tasks to implement critical and high-severity audit fixes (search label, touch targets, ARIA, motion, theming token, stable keys, dead code, unused CSS).
+
 ### Security Improvements
 
 - **Removed hardcoded AUTH_CODE**: Moved AUTH_CODE to environment variable (`AUTH_CODE` env var must be set to enable). Previously hardcoded "pioneerdevai" was a security risk.
